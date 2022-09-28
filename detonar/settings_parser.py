@@ -27,6 +27,8 @@ def arg_parse():
                         help="Feature used to check time of a packet in micro seconds")
     parser.add_argument('--time_feat_sec', default='PHY_LAYER_ARRIVAL_TIME(S)', type=str,
                         help="Feature used to check time of a packet in seconds")
+    parser.add_argument('--simulation_tool', default='Cooja', type=str,
+                        help="Simulation tool used to get dataset: NetSim or Cooja")
 
     # Parameters feature regressor
     parser.add_argument('--model', default='random forest', type=str,

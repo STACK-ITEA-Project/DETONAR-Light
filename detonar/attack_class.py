@@ -230,13 +230,20 @@ def check_n_nexthops(net_traffic, time_step, anomalous_nodes, nodes_and_features
     for node in anomalous_nodes:
         # Get number of next hops before anomaly
         all_transmitted_packets = data_before[data_before['TRANSMITTER_ID'] == node]
-        next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'FF00:0:0:0:0:0:0:0'][
-            'NEXT_HOP_IP'].value_counts().index.to_list()
+        if args.simulation_tool == 'NetSim':
+            next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'FF00:0:0:0:0:0:0:0'][
+                'NEXT_HOP_IP'].value_counts().index.to_list()
+        else:
+            next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'ff02::1a'][
+                'NEXT_HOP_IP'].value_counts().index.to_list()
         dests_before = len(next_hop_ips)
         # Get number of next hops after anomaly
         all_transmitted_packets = data_after[data_after['TRANSMITTER_ID'] == node]
-        next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'FF00:0:0:0:0:0:0:0'][
-            'NEXT_HOP_IP'].value_counts().index.to_list()
+        if args.simulation_tool == 'NetSim':
+            next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'FF00:0:0:0:0:0:0:0'][
+                'NEXT_HOP_IP'].value_counts().index.to_list()
+            next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'ff02::1a'][
+                'NEXT_HOP_IP'].value_counts().index.to_list()
         dests_after = len(next_hop_ips)
         # If a new destination appears then change it in the conditions dictionary
         if (dests_after > dests_before):

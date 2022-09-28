@@ -116,7 +116,10 @@ def get_features(data, node_name, args):  # full_data, node_name, args):
         rate = len(successful.index) / len(transmitted_packets.index) * 100
     features[11] = rate
     # Get number of broadcast packets sent
-    broadcast = transmitted_packets[transmitted_packets['DESTINATION_IP'] == 'FF00:0:0:0:0:0:0:0']
+    if args.simulation_tool == 'NetSim':
+        broadcast = transmitted_packets[transmitted_packets['DESTINATION_IP'] == 'FF00:0:0:0:0:0:0:0']
+    else:
+        broadcast = transmitted_packets[transmitted_packets['DESTINATION_IP'] == 'ff02::1a']
     features[12] = len(broadcast.index)
     # Get number of incoming application packets that do not have itself as destination
     received_app_pcks = received_packets[received_packets['PACKET_TYPE'] == 'Sensing']
