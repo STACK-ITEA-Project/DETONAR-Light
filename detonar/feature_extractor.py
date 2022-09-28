@@ -107,9 +107,6 @@ def get_features(data, node_name, args):  # full_data, node_name, args):
     # Get number of different source IPs
     destination_ips = all_packets['DESTINATION_IP'].value_counts().index.to_list()
     features[10] = len(destination_ips)
-    # Get number of Gateway IPs
-    gateway_ips = transmitted_packets['GATEWAY_IP'].value_counts().index.to_list()
-    features[11] = len(gateway_ips)
     # Get successful transmission rate
     successful = transmitted_packets[transmitted_packets['PACKET_STATUS'] == 'Successful']
     collided = transmitted_packets[transmitted_packets['PACKET_STATUS'] == 'Collided']
@@ -117,10 +114,10 @@ def get_features(data, node_name, args):  # full_data, node_name, args):
         rate = 100
     else:
         rate = len(successful.index) / len(transmitted_packets.index) * 100
-    features[12] = rate
+    features[11] = rate
     # Get number of broadcast packets sent
     broadcast = transmitted_packets[transmitted_packets['DESTINATION_IP'] == 'FF00:0:0:0:0:0:0:0']
-    features[13] = len(broadcast.index)
+    features[12] = len(broadcast.index)
     # Get number of incoming application packets that do not have itself as destination
     received_app_pcks = received_packets[received_packets['PACKET_TYPE'] == 'Sensing']
     incoming = received_app_pcks[(received_app_pcks['DESTINATION_ID'] != received_app_pcks['RECEIVER_ID']) & (received_app_pcks['PACKET_STATUS'] == 'Successful')]
@@ -131,11 +128,11 @@ def get_features(data, node_name, args):  # full_data, node_name, args):
         transmitted_app_pcks['SOURCE_ID'] != transmitted_app_pcks['TRANSMITTER_ID']]
     n_outgoing_app_pcks = len(outgoing.index)
     if (n_incoming_app_pcks == n_outgoing_app_pcks):
-        features[14] = 1
+        features[13] = 1
     elif (n_outgoing_app_pcks != 0 and n_incoming_app_pcks == 0):
-        features[14] = 1
+        features[13] = 1
     else:
-        features[14] = n_outgoing_app_pcks / n_incoming_app_pcks #* 100
+        features[13] = n_outgoing_app_pcks / n_incoming_app_pcks #* 100
 
     return features
 
