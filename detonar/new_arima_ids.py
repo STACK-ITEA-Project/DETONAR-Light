@@ -92,7 +92,7 @@ def create_trains_and_tests(all_files_list, features, size):
 
 def extract_list_nodes(original_net_traffic, size, args):
     # From original traffic get training set
-    data = original_net_traffic[original_net_traffic[args.time_feat_micro] < size * 10 * 1e6]
+    data = original_net_traffic[original_net_traffic[args.time_feat_micro] < size * args.time_window * 1e6]
     # From training set get list of nodes trasmitting at least 1 packet
     list_nodes = data['TRANSMITTER_ID'].value_counts().index.to_list()
     list_nodes = [node for node in list_nodes if 'SENSOR' in node or 'SINKNODE' in node]
@@ -103,7 +103,7 @@ def extract_list_nodes(original_net_traffic, size, args):
 
 def extract_nodes_dests(original_net_traffic, size, args):
     # From original traffic get training set
-    data = original_net_traffic[original_net_traffic[args.time_feat_micro] < size * 10 * 1e6]
+    data = original_net_traffic[original_net_traffic[args.time_feat_micro] < size * args.time_window * 1e6]
     # From training set get list of nodes trasmitting at least 1 packet
     list_nodes = data['TRANSMITTER_ID'].value_counts().index.to_list()
     list_nodes = [node for node in list_nodes if 'SENSOR' in node or 'SINKNODE' in node]
@@ -189,7 +189,7 @@ def main():
     # Through the length of test compute predictions in parallel
     for time_step in range(test_length):
         # Compute corresponding time in seconds to know when each anomaly is raised
-        time_seconds = (time_step + train_length) * args.time_window + args.time_window + 10
+        time_seconds = (time_step + train_length) * args.time_window + args.time_window + args.time_window
         # Define list of nodes that will be checked by attack classifier
         list_nodes_raising_anomaly = {feature: list() for feature in features}
         list_nodes_raising_anomaly_full_name = {feature: list() for feature in features}
@@ -360,7 +360,7 @@ def parallel_main():
     # Through the length of test compute predictions in parallel
     for time_step in range(test_length):
         # Compute corresponding time in seconds to know when each anomaly is raised
-        time_seconds = (time_step + train_length) * args.time_window + args.time_window + 10
+        time_seconds = (time_step + train_length) * args.time_window + args.time_window + args.time_window
         # Define list of nodes that will be checked by attack classifier
         list_nodes_raising_anomaly = {feature: list() for feature in features}
         list_nodes_raising_anomaly_full_name = {feature: list() for feature in features}

@@ -110,8 +110,8 @@ def extract_feature_before_and_after(features_series, nodes, time_step, args):
 
 def check_communicating_nodes(net_traffic, time_step, list_nodes_train, anomalous_nodes, nodes_and_features_dict, args):
     # From original traffic get nodes communicating in this time window set
-    condition = (net_traffic[args.time_feat_micro] > (time_step + 1) * 10 * 1e6) & (
-            net_traffic[args.time_feat_micro] < (time_step + 2) * 10 * 1e6)
+    condition = (net_traffic[args.time_feat_micro] > (time_step + 1) * args.time_window * 1e6) & (
+            net_traffic[args.time_feat_micro] < (time_step + 2) * args.time_window * 1e6)
     data = net_traffic[condition]
     # Get list of nodes trasmitting at least 1 packet
     list_nodes = data['TRANSMITTER_ID'].value_counts().index.to_list()
@@ -134,9 +134,30 @@ def multiple_check_communicating_nodes(net_traffic, time_step, list_nodes_train,
     change_in_communicating_nodes = False
     # From original traffic get nodes communicating in this time window set
     mini_window = 3
-    for i in range(0, 10, mini_window):
-        condition = (net_traffic[args.time_feat_sec] > ((time_step + 1) * 10 + i)) & (
-                net_traffic[args.time_feat_sec] < ((time_step + 1) * 10 + i + mini_window))
+    if args.simulation_tool == 'NetSim':
+        for i in range(0, 10, mini_window):
+            condition = (net_traffic[args.time_feat_sec] > ((time_step + 1) * args.time_window + i)) & (
+                    net_traffic[args.time_feat_sec] < ((time_step + 1) * args.time_window + i + mini_window))
+            data = net_traffic[condition]
+            # Get list of nodes trasmitting at least 1 packet
+            list_nodes = data['TRANSMITTER_ID'].value_counts().index.to_list()
+            list_nodes = [node.split('-')[-1] for node in list_nodes if 'SENSOR' in node or 'SINKNODE' in node]
+            list_nodes.sort()
+            list_nodes_train.sort()
+            # Check if this list is equal to the obtained during training, otherwise it's clone attack
+            if (not (list_nodes == list_nodes_train)):
+                change_in_communicating_nodes = True
+                nodes_missing = np.setdiff1d(list_nodes_train, list_nodes)
+                for node in nodes_missing:
+                    nodes_and_features_dict[node]['# sensors'] = True
+                    print('\tDevice {} -> CLONE-ID or SYBIL ATTACK!!!!'.format(node))
+                    output_file.write('\tCLONE-ID or SYBIL ATTACK -> ATTACKER NODE: {}\n'.format(node))
+                    if node in anomalous_nodes:
+                        anomalous_nodes.remove(node)
+                break
+    else:
+        condition = (net_traffic[args.time_feat_sec] > ((time_step + 1) * args.time_window)) & (
+                net_traffic[args.time_feat_sec] < ((time_step + 2) * args.time_window))
         data = net_traffic[condition]
         # Get list of nodes trasmitting at least 1 packet
         list_nodes = data['TRANSMITTER_ID'].value_counts().index.to_list()
@@ -153,14 +174,13 @@ def multiple_check_communicating_nodes(net_traffic, time_step, list_nodes_train,
                 output_file.write('\tCLONE-ID or SYBIL ATTACK -> ATTACKER NODE: {}\n'.format(node))
                 if node in anomalous_nodes:
                     anomalous_nodes.remove(node)
-            break
     return anomalous_nodes, nodes_and_features_dict, change_in_communicating_nodes
 
 
 def get_ranks_in_window(control_traffic, time_step, anomalous_nodes, args):
     # From original traffic get considered window
-    condition = (control_traffic[args.time_feat_sec] > (time_step + 1) * 10) & (
-            control_traffic[args.time_feat_sec] < (time_step + 2) * 10)
+    condition = (control_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
+            control_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data = control_traffic[condition]
     names = data['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data.drop(columns=['TRANSMITTER_ID'], inplace=True)
@@ -214,14 +234,14 @@ def check_ranks_changed(previous_ranks, actual_ranks, nodes_and_features_dict, a
 def check_n_nexthops(net_traffic, time_step, anomalous_nodes, nodes_and_features_dict, args):
     change_in_nexthops = False
     # Get data before anomaly is raised
-    condition = (net_traffic[args.time_feat_sec] < (time_step + 1) * 10)
+    condition = (net_traffic[args.time_feat_sec] < (time_step + 1) * args.time_window)
     data_before = net_traffic[condition]
     names = data_before['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_before.drop(columns=['TRANSMITTER_ID'], inplace=True)
     data_before['TRANSMITTER_ID'] = names[1]
     # Get data after the anomaly
-    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * 10) & (
-            net_traffic[args.time_feat_sec] < (time_step + 2) * 10)
+    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
+            net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data_after = net_traffic[condition]
     names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
@@ -252,15 +272,15 @@ def check_n_nexthops(net_traffic, time_step, anomalous_nodes, nodes_and_features
     return nodes_and_features_dict, change_in_nexthops
 
 
-def check_n_neighbors(net_traffic, time_step, anomalous_nodes, nodes_and_features_dict):
+def check_n_neighbors(net_traffic, time_step, anomalous_nodes, nodes_and_features_dict, args):
     # Get data before anomaly is raised
-    condition = (net_traffic[args.time_feat_micro] < (time_step + 1) * 10 * 1e6)
+    condition = (net_traffic[args.time_feat_micro] < (time_step + 1) * args.time_window * 1e6)
     data_before = net_traffic[condition]
     names = data_before['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_before.drop(columns=['TRANSMITTER_ID'], inplace=True)
     data_before['TRANSMITTER_ID'] = names[1]
     # Get data after the anomaly
-    condition = (net_traffic[args.time_feat_micro] < (time_step + 2) * 10 * 1e6)
+    condition = (net_traffic[args.time_feat_micro] < (time_step + 2) * args.time_window * 1e6)
     data_after = net_traffic[condition]
     names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
@@ -286,15 +306,15 @@ def check_n_neighbors(net_traffic, time_step, anomalous_nodes, nodes_and_feature
 def check_versions(net_traffic, time_step, anomalous_nodes, nodes_and_features_dict, args):
     change_in_versions = False
     # Get data before anomaly is raised
-    condition = (net_traffic[args.time_feat_sec] > (time_step) * 10) & (
-            net_traffic[args.time_feat_sec] < (time_step + 1) * 10)
+    condition = (net_traffic[args.time_feat_sec] > (time_step) * args.time_window) & (
+            net_traffic[args.time_feat_sec] < (time_step + 1) * args.time_window)
     data_before = net_traffic[condition]
     names = data_before['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_before.drop(columns=['TRANSMITTER_ID'], inplace=True)
     data_before['TRANSMITTER_ID'] = names[1]
     # Get data after the anomaly
-    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * 10) & (
-            net_traffic[args.time_feat_sec] < (time_step + 2) * 10)
+    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
+            net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data_after = net_traffic[condition]
     names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
@@ -324,8 +344,8 @@ def check_versions(net_traffic, time_step, anomalous_nodes, nodes_and_features_d
 
 def find_attacker_ranks(net_traffic, time_step, all_nodes, args):
     # Get data after the anomaly
-    condition = (net_traffic[args.time_feat_sec] > (10) * 10) & (
-            net_traffic[args.time_feat_sec] < (time_step + 2) * 10)
+    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
+            net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data_after = net_traffic[condition]
     names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
@@ -364,8 +384,8 @@ def find_attacker_ranks(net_traffic, time_step, all_nodes, args):
 
 def find_attacker_versions(net_traffic, time_step, all_nodes, args):
     # Get data after the anomaly
-    condition = (net_traffic[args.time_feat_sec] > (10) * 10) & (
-            net_traffic[args.time_feat_sec] < (time_step + 2) * 10)
+    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
+            net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data_after = net_traffic[condition]
     names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
@@ -405,8 +425,8 @@ def find_attacker_versions(net_traffic, time_step, all_nodes, args):
 
 def find_attacker_ranks_and_versions(net_traffic, time_step, all_nodes, args):
     # Get data after the anomaly
-    condition = (net_traffic[args.time_feat_sec] > (10) * 10) & (
-            net_traffic[args.time_feat_sec] < (time_step + 2) * 10)
+    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
+            net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data_after = net_traffic[condition]
     names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
@@ -500,8 +520,8 @@ def check_wormhole(net_traffic, time_step, anomalous_nodes, nodes_and_features_d
     # Create empty dictionary of nodes and dests
     dict_nodes_dests = {node: [] for node in anomalous_nodes}
     # Get data after the anomaly
-    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * 10) & (
-            net_traffic[args.time_feat_sec] < (time_step + 2) * 10)
+    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
+            net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data_after = net_traffic[condition]
     names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
@@ -585,7 +605,7 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
                 nodes_and_features_dict[node][feature_class] = check_feature_with_max(train, ground_truth)
             if (feature_class == '# DIS txd' or feature_class == '# next-hop IPs'):
                 change_in_short_past = False
-                for i in range(5):
+                for i in range(int(args.time_window / 2)):
                     previous_value = feature_s[time_step - i - 1]
                     ground_truth = feature_s[time_step - i]
                     if (check_feature_single_val(previous_value, ground_truth)):
