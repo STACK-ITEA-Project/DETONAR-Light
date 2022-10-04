@@ -262,6 +262,7 @@ def check_n_nexthops(net_traffic, time_step, anomalous_nodes, nodes_and_features
         if args.simulation_tool == 'NetSim':
             next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'FF00:0:0:0:0:0:0:0'][
                 'NEXT_HOP_IP'].value_counts().index.to_list()
+        else:
             next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'ff02::1a'][
                 'NEXT_HOP_IP'].value_counts().index.to_list()
         dests_after = len(next_hop_ips)
