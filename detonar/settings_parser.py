@@ -58,7 +58,7 @@ def arg_parse():
     parser.add_argument('--all_features',
                         default=['# DIO rcvd', '# DIO txd', '# DAO rcvd', '# DAO txd', '# DIS rcvd', '# DIS txd',
                                  '# APP rcvd', '# APP txd', '# different APPs', '# source IPs', '# dest IPs',
-                                 '# gateway IPs', 'Succ rate', '# broadcasted', '# neighbours', '# next-hop IPs',
+                                 '# gateway IPs', 'Succ rate', '# broadcasted', '# neighbours', 'parent_changed',
                                  'incoming_vs_outgoing'],
                         nargs='+', help="features to be fitted")
     parser.add_argument('--output_imgs_folder', default='log/images/non_cumulative/', type=str,
@@ -68,8 +68,9 @@ def arg_parse():
 
     # Parameters attack classification
     parser.add_argument('--attack_classification_features',
-                        default=['# DIO txd', '# DAO txd', '# DIS txd', '# APP txd', '# source IPs', '# dest IPs',
-                                 '# broadcasted', 'incoming_vs_outgoing'],
+                        default=['# DIO rcvd', '# DIO txd', '# DAO txd', '# DIS txd', '# APP rcvd', '# APP txd',
+                                 'incoming_vs_outgoing', 'parent_changed', '# ranks',
+                                 'version_changed', 'active'],
                         nargs='+', help="features used for attack classification")
 
     args = parser.parse_args()

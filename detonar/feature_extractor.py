@@ -280,7 +280,8 @@ def parallelized_main():
 
         # Storing file with DAOs only
         dao_packets = data[data['CONTROL_PACKET_TYPE/APP_NAME'] == 'DAO']
-        dao_packets = dao_packets[['SOURCE_ID', 'DESTINATION_ID', args.time_feat_micro]]
+        #dao_packets = dao_packets[['SOURCE_ID', 'DESTINATION_ID', args.time_feat_micro]]
+        dao_packets = dao_packets[['SOURCE_ID', 'DESTINATION_ID', args.time_feat_micro, 'RECEIVER_ID', 'TRANSMITTER_ID', 'NEXT_HOP_IP']]
         dao_packets = dao_packets.rename(columns={args.time_feat_micro: args.time_feat_sec})
         name = args.out_feat_files + '/' + args.scenario + '/simulation-' + \
                filenames[file_index].split("/")[-1].split("\\")[-1].split(".")[0] + \
