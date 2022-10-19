@@ -65,6 +65,8 @@ def arg_parse():
                         help="folder for features files to be stored")
     parser.add_argument('--chosen_simulation', default='', type=str,
                         help="simulation to be used for anomaly detection")
+    parser.add_argument('--output_dir', default='output_txts', type=str,
+                        help="folder for output text-files to be stored")
 
     # Parameters attack classification
     parser.add_argument('--attack_classification_features',
