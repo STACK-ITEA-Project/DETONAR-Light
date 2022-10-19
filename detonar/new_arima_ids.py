@@ -302,14 +302,14 @@ def parallel_main():
     args = settings_parser.arg_parse()
 
     # Setting file name for output txt
-    if not os.path.exists(os.path.join(os.getcwd(), 'log', 'output_txts', args.scenario)):
-        os.makedirs(os.path.join(os.getcwd(), 'log', 'output_txts', args.scenario))
-    output_filename = os.path.join(os.getcwd(), 'log', 'output_txts', args.scenario,
+    if not os.path.exists(os.path.join(os.getcwd(), 'log', args.output_dir, args.scenario)):
+        os.makedirs(os.path.join(os.getcwd(), 'log', args.output_dir, args.scenario))
+    output_filename = os.path.join(os.getcwd(), 'log', args.output_dir, args.scenario,
                                    args.chosen_simulation.split('-')[-1] + '.txt')
     output_file = open(output_filename, "w")
     output_file.write("Scenario: {} - Simulation {}\n".format(args.scenario, args.chosen_simulation.split('-')[-1]))
     # Getting data path
-    filenames = glob.glob(os.path.join(os.getcwd(), args.feat_folders, args.scenario, '*'))
+    filenames = glob.glob(os.path.join(os.getcwd(), args.feat_folders, args.scenario, str(int(args.simulation_time)), '*'))
     filenames.sort()
     all_files = get_files(filenames, args)
     all_files = [item for item in all_files if args.chosen_simulation in item]
