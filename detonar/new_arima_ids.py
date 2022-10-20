@@ -137,7 +137,7 @@ def main():
     output_file = open(output_filename, "w")
     output_file.write("Scenario: {} - Simulation {}\n".format(args.scenario, args.chosen_simulation.split('-')[-1]))
     # Getting data path
-    filenames = glob.glob(os.path.join(os.getcwd(), args.feat_folders, args.scenario, '*'))
+    filenames = glob.glob(os.path.join(os.getcwd(), args.feat_folders, args.scenario, str(int(args.simulation_time)), '*'))
     filenames.sort()
     all_files = get_files(filenames, args)
     all_files = [item for item in all_files if args.chosen_simulation in item]
