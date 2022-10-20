@@ -184,12 +184,14 @@ def get_ranks_in_window(control_traffic, time_step, anomalous_nodes, args):
     data = control_traffic[condition]
     names = data['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data.drop(columns=['TRANSMITTER_ID'], inplace=True)
-    data['TRANSMITTER_ID'] = names[1]
-    # For each node get the list of ranks assumed in this time window
     all_ranks = {node_name: [] for node_name in anomalous_nodes}
-    for node_name in anomalous_nodes:
-        ranks = data[data['TRANSMITTER_ID'] == node_name]['RPL_RANK'].value_counts().index.to_list()
-        all_ranks[node_name] = ranks
+    # If there is no change in ranks this window, return an empty list
+    if len(data) != 0:
+        data['TRANSMITTER_ID'] = names[1]
+        # For each node get the list of ranks assumed in this time window
+        for node_name in anomalous_nodes:
+            ranks = data[data['TRANSMITTER_ID'] == node_name]['RPL_RANK'].value_counts().index.to_list()
+            all_ranks[node_name] = ranks
     return all_ranks
 
 
@@ -307,11 +309,18 @@ def check_n_neighbors(net_traffic, time_step, anomalous_nodes, nodes_and_feature
 def check_versions(net_traffic, time_step, anomalous_nodes, nodes_and_features_dict, args):
     change_in_versions = False
     # Get data before anomaly is raised
-    condition = (net_traffic[args.time_feat_sec] > (time_step) * args.time_window) & (
-            net_traffic[args.time_feat_sec] < (time_step + 1) * args.time_window)
-    data_before = net_traffic[condition]
-    names = data_before['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
-    data_before.drop(columns=['TRANSMITTER_ID'], inplace=True)
+    data_found = False
+    counter = 0
+    # If there is no data in previous window, fetch from next-last
+    while not data_found:
+        condition = (net_traffic[args.time_feat_sec] > (time_step) * args.time_window) & (
+                net_traffic[args.time_feat_sec] < (time_step + 1) * args.time_window)
+        data_before = net_traffic[condition]
+        names = data_before['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
+        data_before.drop(columns=['TRANSMITTER_ID'], inplace=True)
+        counter += 1
+        if len(data_before) != 0:
+            data_found = True
     data_before['TRANSMITTER_ID'] = names[1]
     # Get data after the anomaly
     condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
@@ -319,27 +328,28 @@ def check_versions(net_traffic, time_step, anomalous_nodes, nodes_and_features_d
     data_after = net_traffic[condition]
     names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
-    data_after['TRANSMITTER_ID'] = names[1]
-    # Check each anomalous node if it has gained a next hop IP address (changing parent or destination)
-    for node in anomalous_nodes:
-        # Get number of next hops before anomaly
-        all_transmitted_packets = data_before[data_before['TRANSMITTER_ID'] == node]
-        condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO') | (
-                all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DAO') | (
-                            all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIS')
-        transmitted_controls = all_transmitted_packets[condition]
-        versions_before = transmitted_controls['RPL_VERSION'].value_counts().index.to_list()
-        # Get number of next hops after anomaly
-        all_transmitted_packets = data_after[data_after['TRANSMITTER_ID'] == node]
-        condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO') | (
-                all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DAO') | (
-                            all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIS')
-        transmitted_controls = all_transmitted_packets[condition]
-        versions_after = transmitted_controls['RPL_VERSION'].value_counts().index.to_list()
-        # If a new destination appears then change it in the conditions dictionary
-        if (versions_after != versions_before):
-            change_in_versions = True
-            nodes_and_features_dict[node]['version'] = True
+    if len(data_after) != 0:
+        data_after['TRANSMITTER_ID'] = names[1]
+        # Check each anomalous node if it has gained a next hop IP address (changing parent or destination)
+        for node in anomalous_nodes:
+            # Get number of next hops before anomaly
+            all_transmitted_packets = data_before[data_before['TRANSMITTER_ID'] == node]
+            condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO') | (
+                    all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DAO') | (
+                                all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIS')
+            transmitted_controls = all_transmitted_packets[condition]
+            versions_before = transmitted_controls['RPL_VERSION'].value_counts().index.to_list()
+            # Get number of next hops after anomaly
+            all_transmitted_packets = data_after[data_after['TRANSMITTER_ID'] == node]
+            condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO') | (
+                    all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DAO') | (
+                                all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIS')
+            transmitted_controls = all_transmitted_packets[condition]
+            versions_after = transmitted_controls['RPL_VERSION'].value_counts().index.to_list()
+            # If a new destination appears then change it in the conditions dictionary
+            if (versions_after != versions_before):
+                change_in_versions = True
+                nodes_and_features_dict[node]['version'] = True
     return nodes_and_features_dict, change_in_versions
 
 
@@ -562,9 +572,17 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
     toc = tm.perf_counter()
     # Check if rank changed or not
     tic = tm.perf_counter()
-    previous_ranks = get_ranks_in_window(ranks_vers, time_step - 1, anomalous_nodes, args)
     actual_ranks = get_ranks_in_window(ranks_vers, time_step, anomalous_nodes, args)
-    nodes_and_features_dict, change_in_ranks = check_ranks_changed(previous_ranks, actual_ranks,
+    if len(actual_ranks) > 0:
+        data_found = False
+        counter = 0
+        while not data_found:
+            previous_ranks = get_ranks_in_window(ranks_vers, time_step - counter - 1, anomalous_nodes, args)
+            if len(previous_ranks) != 0:
+                data_found = True
+            counter += 1
+
+        nodes_and_features_dict, change_in_ranks = check_ranks_changed(previous_ranks, actual_ranks,
                                                                    nodes_and_features_dict, anomalous_nodes)
     toc = tm.perf_counter()
     # Check number of next hops
