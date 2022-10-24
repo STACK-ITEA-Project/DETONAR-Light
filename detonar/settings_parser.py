@@ -9,7 +9,7 @@ def arg_parse():
                         help="root path to data directory")
     parser.add_argument('--scenario', type=str, default='Legitimate',
                         help="name of attack/legitimate")
-    parser.add_argument('--n_features', default=15, type=int,
+    parser.add_argument('--n_features', default=14, type=int,
                         help="number of features used")
     parser.add_argument('--time_start', default=10.0, type=float,
                         help="time window in seconds")
