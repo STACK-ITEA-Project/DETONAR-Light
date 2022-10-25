@@ -236,10 +236,16 @@ def check_ranks_changed(previous_ranks, actual_ranks, nodes_and_features_dict, a
 def check_n_nexthops(net_traffic, time_step, anomalous_nodes, nodes_and_features_dict, args):
     change_in_nexthops = False
     # Get data before anomaly is raised
-    condition = (net_traffic[args.time_feat_sec] < (time_step + 1) * args.time_window)
-    data_before = net_traffic[condition]
-    names = data_before['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
-    data_before.drop(columns=['TRANSMITTER_ID'], inplace=True)
+    data_found = False
+    i = 0
+    while not data_found:
+        condition = (net_traffic[args.time_feat_sec] < (time_step + 1) * args.time_window)
+        data_before = net_traffic[condition]
+        names = data_before['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
+        data_before.drop(columns=['TRANSMITTER_ID'], inplace=True)
+        if len(data_before) != 0:
+            data_found = True
+        i += 1
     data_before['TRANSMITTER_ID'] = names[1]
     # Get data after the anomaly
     condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
@@ -247,31 +253,32 @@ def check_n_nexthops(net_traffic, time_step, anomalous_nodes, nodes_and_features
     data_after = net_traffic[condition]
     names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
-    data_after['TRANSMITTER_ID'] = names[1]
-    # Check each anomalous node if it has gained a next hop IP address (changing parent or destination)
-    for node in anomalous_nodes:
-        # Get number of next hops before anomaly
-        all_transmitted_packets = data_before[data_before['TRANSMITTER_ID'] == node]
-        if args.simulation_tool == 'NetSim':
-            next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'FF00:0:0:0:0:0:0:0'][
-                'NEXT_HOP_IP'].value_counts().index.to_list()
-        else:
-            next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'ff02::1a'][
-                'NEXT_HOP_IP'].value_counts().index.to_list()
-        dests_before = len(next_hop_ips)
-        # Get number of next hops after anomaly
-        all_transmitted_packets = data_after[data_after['TRANSMITTER_ID'] == node]
-        if args.simulation_tool == 'NetSim':
-            next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'FF00:0:0:0:0:0:0:0'][
-                'NEXT_HOP_IP'].value_counts().index.to_list()
-        else:
-            next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'ff02::1a'][
-                'NEXT_HOP_IP'].value_counts().index.to_list()
-        dests_after = len(next_hop_ips)
-        # If a new destination appears then change it in the conditions dictionary
-        if (dests_after > dests_before):
-            change_in_nexthops = True
-            nodes_and_features_dict[node]['# next-hop IPs'] = True
+    if len(data_after) != 0:
+        data_after['TRANSMITTER_ID'] = names[1]
+        # Check each anomalous node if it has gained a next hop IP address (changing parent or destination)
+        for node in anomalous_nodes:
+            # Get number of next hops before anomaly
+            all_transmitted_packets = data_before[data_before['TRANSMITTER_ID'] == node]
+            if args.simulation_tool == 'NetSim':
+                next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'FF00:0:0:0:0:0:0:0'][
+                    'NEXT_HOP_IP'].value_counts().index.to_list()
+            else:
+                next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'ff02::1a'][
+                    'NEXT_HOP_IP'].value_counts().index.to_list()
+            dests_before = len(next_hop_ips)
+            # Get number of next hops after anomaly
+            all_transmitted_packets = data_after[data_after['TRANSMITTER_ID'] == node]
+            if args.simulation_tool == 'NetSim':
+                next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'FF00:0:0:0:0:0:0:0'][
+                    'NEXT_HOP_IP'].value_counts().index.to_list()
+            else:
+                next_hop_ips = all_transmitted_packets[all_transmitted_packets['NEXT_HOP_IP'] != 'ff02::1a'][
+                    'NEXT_HOP_IP'].value_counts().index.to_list()
+            dests_after = len(next_hop_ips)
+            # If a new destination appears then change it in the conditions dictionary
+            if (dests_after > dests_before):
+                change_in_nexthops = True
+                nodes_and_features_dict[node]['# next-hop IPs'] = True
     return nodes_and_features_dict, change_in_nexthops
 
 
@@ -536,21 +543,22 @@ def check_wormhole(net_traffic, time_step, anomalous_nodes, nodes_and_features_d
     data_after = net_traffic[condition]
     names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
     data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
-    data_after['TRANSMITTER_ID'] = names[1]
-    # Check each anomalous node if it has gained a next hop IP address (changing parent or destination)
-    for node in anomalous_nodes:
-        # Get destinations after anomaly
-        condition = (data_after['TRANSMITTER_ID'] == node)
-        receivers = data_after[condition]['RECEIVER_ID'].value_counts().index.to_list()
-        dict_nodes_dests[node] = receivers
-        # If a new destination appears then change it in the conditions dictionary
-        for receiver in receivers:
-            if (receiver not in dict_nodes_dests_from_train[node]):
-                change_in_destination = True
-                nodes_and_features_dict['change dest'] = True
-                nodes_changing_destination.append(node)
-    if (change_in_destination):
-        print('\tNODES CHANGING DESTINATION: {}'.format(nodes_changing_destination))
+    if len(data_after) != 0:
+        data_after['TRANSMITTER_ID'] = names[1]
+        # Check each anomalous node if it has gained a next hop IP address (changing parent or destination)
+        for node in anomalous_nodes:
+            # Get destinations after anomaly
+            condition = (data_after['TRANSMITTER_ID'] == node)
+            receivers = data_after[condition]['RECEIVER_ID'].value_counts().index.to_list()
+            dict_nodes_dests[node] = receivers
+            # If a new destination appears then change it in the conditions dictionary
+            for receiver in receivers:
+                if (receiver not in dict_nodes_dests_from_train[node]):
+                    change_in_destination = True
+                    nodes_and_features_dict['change dest'] = True
+                    nodes_changing_destination.append(node)
+        if (change_in_destination):
+            print('\tNODES CHANGING DESTINATION: {}'.format(nodes_changing_destination))
     return nodes_and_features_dict, change_in_destination, nodes_changing_destination
 
 
