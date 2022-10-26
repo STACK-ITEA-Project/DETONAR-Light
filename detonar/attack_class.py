@@ -632,7 +632,7 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
                 nodes_and_features_dict[node][feature_class] = check_feature_with_max(train, ground_truth)
             if (feature_class == '# DIS txd' or feature_class == '# next-hop IPs'):
                 change_in_short_past = False
-                for i in range(int(args.time_window / 2)):
+                for i in range(3):
                     previous_value = feature_s[time_step - i - 1]
                     ground_truth = feature_s[time_step - i]
                     if (check_feature_single_val(previous_value, ground_truth)):
