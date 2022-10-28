@@ -37,6 +37,33 @@ def refine_edges_list(edges):
 
 
 def get_dodag(data):
+    # Get DAOs where source_ID == transmitter ID (the first step in the route towards the root)
+    # Receiver of these packets^ is the parent
+    source_ids = data['SOURCE_ID'].unique()
+    source_ids_short = [id.split("-")[-1] for id in source_ids]
+
+    # Get DAOs where SOURCE_ID == TRANSMITTER_ID
+    condition = data['SOURCE_ID'] == data['TRANSMITTER_ID']
+    first_hop = data[condition]
+
+    edges = []
+    # For each node sending a DAO, find the latest DAO and add it as an edge
+    for node in source_ids:
+        all_daos = first_hop[first_hop['SOURCE_ID'] == node]
+        latest_condition =  all_daos['PHY_LAYER_ARRIVAL_TIME(S)'] == max(all_daos['PHY_LAYER_ARRIVAL_TIME(S)'])
+        latest_dao = all_daos[latest_condition]
+        parent = latest_dao['RECEIVER_ID']
+        node_short = node.split("-")[-1]
+        parent_array = parent.values
+        parent_short = parent_array[0].split("-")[-1]
+        edges.append((node_short, parent_short))
+    # Use nx to obtain the graph corresponding to the dodag
+    dodag = nx.Graph()
+    # Build the DODAG graph from nodes and edges lists
+    dodag.add_nodes_from(source_ids_short)
+    dodag.add_edges_from(edges)
+
+    '''
     # Get source ids and dest ids only with numbers
     source_ids = data['SOURCE_ID'].values.tolist()
     source_ids = [id.split("-")[-1] for id in source_ids]
@@ -59,8 +86,7 @@ def get_dodag(data):
     edges = refine_edges_list(edges)
     # Build the DODAG graph from nodes and edges lists
     dodag.add_nodes_from(list_of_nodes)
-    dodag.add_edges_from(edges)
-
+    dodag.add_edges_from(edges)'''
     return dodag
 
 
