@@ -10,10 +10,10 @@ simulation_tool = "Cooja"
 output_dir = "output/{}s{}w{}"
 feat_folder = 'log/features_extracted/'
 
-feature_cmd = "python feature_extractor.py --scenario=\"{}\" --simulation_time={} --time_window={} --lag_val=30 " \
+feature_cmd = "python3 feature_extractor.py --scenario=\"{}\" --simulation_time={} --time_window={} --lag_val=30 " \
               "--data_dir=\"{}\" --simulation_tool=\"{}\" --time_start={}"
 
-ids_cmd = "python new_arima_ids.py --scenario=\"{}\" --chosen_simulation=\"simulation-{}\" --simulation_time={} --time_window={} " \
+ids_cmd = "python3 new_arima_ids.py --scenario=\"{}\" --chosen_simulation=\"simulation-{}\" --simulation_time={} --time_window={} " \
           "--lag_val=30 --data_dir=\"{}\" --simulation_tool=\"{}\" --output_dir=\"{}\" --feat_folders=\"{}\" --time_start={}"
 
 # Get all scenarios present in the chosen directory for data set
@@ -85,10 +85,15 @@ for scenario in scenarios:
              'VERSION': [], 'WORMHOLE': [], 'WORST PARENT': []}
             for line in lines:
                 if 'ATTACK' in line and 'ATTACK' not in last_line:
-                    attack_messy, attacker_node = line.split('ATTACK ->')
+                    if 'ATTACKS' in line:
+                        attack_messy, attacker_node = line.split('ATTACKS ->')
+                    else:
+                        attack_messy, attacker_node = line.split('ATTACK ->')
                     attack = attack_messy.lstrip().rstrip()
                     first, second = last_line.split('time')
                     time = last_line.split('time')[-1].split('.0. Devices')[0].rstrip().lstrip()
+                    if attack == 'RANK':
+                        attack = 'RANKS'
                     attack_dict[attack].append(time)
                 last_line = line
             str = ""
