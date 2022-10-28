@@ -3,12 +3,12 @@ import glob
 import subprocess
 import os
 
-sim_time = "3600"
-time_window = "60"
+sim_time = "32400"
+time_window = "600"
 data_dir = "dataset/16_Nodes_Cooja"
 simulation_tool = "Cooja"
 output_dir = "output/{}s{}w{}"
-feat_folder= 'log/features_extracted/'
+feat_folder = 'log/features_extracted/'
 
 feature_cmd = "python feature_extractor.py --scenario=\"{}\" --simulation_time={} --time_window={} --lag_val=30 " \
               "--data_dir=\"{}\" --simulation_tool=\"{}\" --time_start={}"
@@ -35,11 +35,11 @@ for scenario in scenarios:
 
 
 # For each scenario, create a list of simulations existing for that scenario
-simulations  = []
 for scenario in scenarios:
     # Getting files depending on data directory, scenario and simulation time chosen
     sims = glob.glob(os.path.join(os.getcwd(), '..', data_dir, scenario,
                                    'Packet_Trace_' + sim_time + 's', '*.csv'))
+    simulations = []
     if len(sims) > 0:
         for sim in sims:
             clean_sim = sim.split('/')[-1]
@@ -66,7 +66,7 @@ for scenario in scenarios:
 output_filename = os.path.join(os.getcwd(), 'log', 'results_summarized{}.txt'.format(datetime.date.today()))
 result_file = open(output_filename, 'w')
 
-result_file.write("Summarized results for simulations of lenght {}s and {}s time window\n\n".format(sim_time, time_window))
+result_file.write("Summarized results for simulations of length {}s and {}s time window\n\n".format(sim_time, time_window))
 
 for scenario in scenarios:
     if os.path.exists(os.path.join(os.getcwd(), 'log', output_dir.format(sim_time, time_window,datetime.date.today()), scenario)):
