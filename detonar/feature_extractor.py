@@ -280,7 +280,7 @@ def parallelized_main():
 
         # Storing file with DAOs only
         dao_packets = data[data['CONTROL_PACKET_TYPE/APP_NAME'] == 'DAO']
-        dao_packets = dao_packets[['SOURCE_ID', 'DESTINATION_ID', args.time_feat_micro]]
+        dao_packets = dao_packets[['SOURCE_ID', 'DESTINATION_ID', 'RECEIVER_ID', 'TRANSMITTER_ID', args.time_feat_micro]]
         dao_packets = dao_packets.rename(columns={args.time_feat_micro: args.time_feat_sec})
         name = args.out_feat_files + args.scenario + '/' + str(int(args.simulation_time)) + '/simulation-' + \
                filenames[file_index].split("/")[-1].split("\\")[-1].split(".")[0] + \
@@ -327,7 +327,7 @@ def parallelized_main():
 
         # Storing file with control packets and ranks & versions
         ranks_vers = data[data['PACKET_TYPE'] == 'Control_Packet']
-        ranks_vers = ranks_vers[['TRANSMITTER_ID', 'CONTROL_PACKET_TYPE/APP_NAME', args.time_feat_micro, 'RPL_RANK', 'RPL_VERSION']]
+        ranks_vers = ranks_vers[['RECEIVER_ID', 'CONTROL_PACKET_TYPE/APP_NAME', args.time_feat_micro, 'RPL_RANK', 'RPL_VERSION']]
         ranks_vers = ranks_vers.rename(columns={args.time_feat_micro: args.time_feat_sec})
 
         name = args.out_feat_files + args.scenario +  '/' + str(int(args.simulation_time)) + '/simulation-' + \
