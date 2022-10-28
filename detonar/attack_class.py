@@ -177,59 +177,78 @@ def multiple_check_communicating_nodes(net_traffic, time_step, list_nodes_train,
     return anomalous_nodes, nodes_and_features_dict, change_in_communicating_nodes
 
 
-def get_ranks_in_window(control_traffic, time_step, anomalous_nodes, args):
+def get_ranks_in_window(control_traffic, time_step, anomalous_nodes, args, is_actual_ranks):
     # From original traffic get considered window
     condition = (control_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
             control_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data = control_traffic[condition]
-    names = data['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
-    data.drop(columns=['TRANSMITTER_ID'], inplace=True)
+    names = data['RECEIVER_ID'].str.split('-', n=1, expand=True)
+    data.drop(columns=['RECEIVER_ID'], inplace=True)
     all_ranks = {node_name: [] for node_name in anomalous_nodes}
     # If there is no change in ranks this window, return an empty list
     if len(data) != 0:
-        data['TRANSMITTER_ID'] = names[1]
+        data['RECEIVER_ID'] = names[1]
         # For each node get the list of ranks assumed in this time window
         for node_name in anomalous_nodes:
-            ranks = data[data['TRANSMITTER_ID'] == node_name]['RPL_RANK'].value_counts().index.to_list()
+            ranks = data[data['RECEIVER_ID'] == node_name]['RPL_RANK'].value_counts().index.to_list()
+            counter = 0
+            # If this is "previous ranks", look further back in history if an empty list is returned
+            while len(ranks) == 0 and not is_actual_ranks:
+                counter +=1
+                condition = (control_traffic[args.time_feat_sec] > (time_step + 1 - counter) * args.time_window) & (
+                        control_traffic[args.time_feat_sec] < (time_step + 2 - counter) * args.time_window)
+                data = control_traffic[condition]
+                names = data['RECEIVER_ID'].str.split('-', n=1, expand=True)
+                data.drop(columns=['RECEIVER_ID'], inplace=True)
+                data['RECEIVER_ID'] = names[1]
+                if len(data) != 0:
+                    ranks = data[data['RECEIVER_ID'] == node_name]['RPL_RANK'].value_counts().index.to_list()
             all_ranks[node_name] = ranks
     return all_ranks
+
+def compare_rank(rank_one, rank_two):
+    # Return 0 if ranks are equivalent in regards to hops from root
+    # Return -1 if rank_one is smaller than rank_two in regards to hops from root
+    # Return 1 if rank_one is greater than rank_two in regards to hops from root
+    diff = rank_one - rank_two
+    if diff not in range(-127, 127):
+        if diff < 0:
+            return -1
+        elif diff > 0:
+            return 1
+    return 0
+
 
 
 def check_ranks_changed(previous_ranks, actual_ranks, nodes_and_features_dict, anomalous_nodes):
     change_in_ranks = False
     for node in anomalous_nodes:
-        prev_ranks = previous_ranks[node]
-        ac_ranks = actual_ranks[node]
-        prev_ranks.sort()
-        ac_ranks.sort()
-        if (prev_ranks != ac_ranks):
-            change_in_ranks = True
-            joined_ranks = prev_ranks + ac_ranks
-            joined_ranks = list(set(joined_ranks))
-            nodes_and_features_dict[node]['rank changed'] = True
-            if (len(joined_ranks) == 2):
-                nodes_and_features_dict[node]['rank changed once'] = True
-                if (65535.0 in joined_ranks):
-                    nodes_and_features_dict[node]['infinite rank'] = True
-                elif (len(prev_ranks) == 2 and len(ac_ranks) == 1):
-                    if (max(prev_ranks) > ac_ranks[0]):
-                        nodes_and_features_dict[node]['smaller rank'] = True
-                    else:
-                        nodes_and_features_dict[node]['greater rank'] = True
-                elif (len(prev_ranks) == 1 and len(ac_ranks) == 2):
-                    if (max(ac_ranks) > prev_ranks[0]):
-                        nodes_and_features_dict[node]['greater rank'] = True
-                    else:
-                        nodes_and_features_dict[node]['smaller rank'] = True
-                elif (len(prev_ranks) == 1 and len(ac_ranks) == 1):
-                    if (max(ac_ranks) > prev_ranks[0]):
-                        nodes_and_features_dict[node]['greater rank'] = True
-                    else:
-                        nodes_and_features_dict[node]['smaller rank'] = True
-                else:
-                    print('Something Wrong')
-            else:
-                nodes_and_features_dict[node]['rank changed more than once'] = True
+        if node != '1':
+            prev_ranks = previous_ranks[node]
+            ac_ranks = actual_ranks[node]
+            if len(ac_ranks) != 0:
+                last_rank = prev_ranks[-1] # If these are in chronological order
+                rank_changes = 0
+                for rank in ac_ranks:
+                    # I difference between ranks are >= 128 the rank has increased or decreased
+                    diff = rank - last_rank
+                    if compare_rank(rank, last_rank) != 0:
+                        change_in_ranks = True
+                        nodes_and_features_dict[node]['rank changed'] = True
+                        rank_changes += 1
+                    if len(ac_ranks) > 1:
+                        last_rank = rank
+                if rank_changes > 1:
+                    nodes_and_features_dict[node]['rank changed more than once'] = True
+                if len(ac_ranks) > 1 and compare_rank(ac_ranks[-1], ac_ranks[0]) == 1:
+                    nodes_and_features_dict[node]['greater rank'] = True
+                elif len(ac_ranks) > 1 and compare_rank(ac_ranks[-1], ac_ranks[0]) == -1:
+                    nodes_and_features_dict[node]['smaller rank'] = True
+                elif len(ac_ranks) == 1 and compare_rank(ac_ranks[0], prev_ranks[-1]) == 1:
+                    nodes_and_features_dict[node]['greater rank'] = True
+                elif len(ac_ranks) > 1 and compare_rank(ac_ranks[0], prev_ranks[-1]) == -1:
+                    nodes_and_features_dict[node]['smaller rank'] = True
+                # Possibly check for infinite rank?
     return nodes_and_features_dict, change_in_ranks
 
 
@@ -323,38 +342,38 @@ def check_versions(net_traffic, time_step, anomalous_nodes, nodes_and_features_d
         condition = (net_traffic[args.time_feat_sec] > (time_step) * args.time_window) & (
                 net_traffic[args.time_feat_sec] < (time_step + 1) * args.time_window)
         data_before = net_traffic[condition]
-        names = data_before['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
-        data_before.drop(columns=['TRANSMITTER_ID'], inplace=True)
+        names = data_before['RECEIVER_ID'].str.split('-', n=1, expand=True)
+        data_before.drop(columns=['RECEIVER_ID'], inplace=True)
         counter += 1
         if len(data_before) != 0:
             data_found = True
-    data_before['TRANSMITTER_ID'] = names[1]
+    data_before['RECEIVER_ID'] = names[1]
     # Get data after the anomaly
     condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
             net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data_after = net_traffic[condition]
-    names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
-    data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
+    names = data_after['RECEIVER_ID'].str.split('-', n=1, expand=True)
+    data_after.drop(columns=['RECEIVER_ID'], inplace=True)
     if len(data_after) != 0:
-        data_after['TRANSMITTER_ID'] = names[1]
+        data_after['RECEIVER_ID'] = names[1]
         # Check each anomalous node if it has gained a next hop IP address (changing parent or destination)
         for node in anomalous_nodes:
             # Get number of next hops before anomaly
-            all_transmitted_packets = data_before[data_before['TRANSMITTER_ID'] == node]
+            all_transmitted_packets = data_before[data_before['RECEIVER_ID'] == node]
             condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO') | (
                     all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DAO') | (
                                 all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIS')
             transmitted_controls = all_transmitted_packets[condition]
             versions_before = transmitted_controls['RPL_VERSION'].value_counts().index.to_list()
             # Get number of next hops after anomaly
-            all_transmitted_packets = data_after[data_after['TRANSMITTER_ID'] == node]
+            all_transmitted_packets = data_after[data_after['RECEIVER_ID'] == node]
             condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO') | (
                     all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DAO') | (
                                 all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIS')
             transmitted_controls = all_transmitted_packets[condition]
             versions_after = transmitted_controls['RPL_VERSION'].value_counts().index.to_list()
             # If a new destination appears then change it in the conditions dictionary
-            if (versions_after != versions_before):
+            if (versions_after != versions_before and len(versions_after) != 0):
                 change_in_versions = True
                 nodes_and_features_dict[node]['version'] = True
     return nodes_and_features_dict, change_in_versions
@@ -365,15 +384,15 @@ def find_attacker_ranks(net_traffic, time_step, all_nodes, args):
     condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
             net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data_after = net_traffic[condition]
-    names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
-    data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
-    data_after['TRANSMITTER_ID'] = names[1]
+    names = data_after['RECEIVER_ID'].str.split('-', n=1, expand=True)
+    data_after.drop(columns=['RECEIVER_ID'], inplace=True)
+    data_after['RECEIVER_ID'] = names[1]
     # Create dictionary with each node and corresponding time of rank change
     nodes_and_times_dict = {node_name: math.inf for node_name in all_nodes}
     # For each node check when it changed advised rank for the first time
     for node in all_nodes:
         # Get only DIOs transmitted by a single node
-        all_transmitted_packets = data_after[data_after['TRANSMITTER_ID'] == node]
+        all_transmitted_packets = data_after[data_after['RECEIVER_ID'] == node]
         condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO')
         transmitted_dios = all_transmitted_packets[condition]
         # Store smallest time in which rank changes
@@ -405,15 +424,15 @@ def find_attacker_versions(net_traffic, time_step, all_nodes, args):
     condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
             net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data_after = net_traffic[condition]
-    names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
-    data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
-    data_after['TRANSMITTER_ID'] = names[1]
+    names = data_after['RECEIVER_ID'].str.split('-', n=1, expand=True)
+    data_after.drop(columns=['RECEIVER_ID'], inplace=True)
+    data_after['RECEIVER_ID'] = names[1]
     # Create dictionary with each node and corresponding time of rank change
     nodes_and_times_dict = {node_name: math.inf for node_name in all_nodes}
     # For each node check when it changed advised rank for the first time
     for node in all_nodes:
         # Get only DIOs transmitted by a single node
-        all_transmitted_packets = data_after[data_after['TRANSMITTER_ID'] == node]
+        all_transmitted_packets = data_after[data_after['RECEIVER_ID'] == node]
         condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO')
         transmitted_dios = all_transmitted_packets[condition]
         # Store smallest time in which version changes
@@ -446,16 +465,16 @@ def find_attacker_ranks_and_versions(net_traffic, time_step, all_nodes, args):
     condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
             net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
     data_after = net_traffic[condition]
-    names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
-    data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
-    data_after['TRANSMITTER_ID'] = names[1]
+    names = data_after['RECEIVER_ID'].str.split('-', n=1, expand=True)
+    data_after.drop(columns=['RECEIVER_ID'], inplace=True)
+    data_after['RECEIVER_ID'] = names[1]
     # Create dictionary with each node and corresponding time of rank change and versions change
     nodes_and_ranks_times_dict = {node_name: math.inf for node_name in all_nodes}
     nodes_and_versions_times_dict = {node_name: math.inf for node_name in all_nodes}
     # For each node check when it changed advised rank for the first time
     for node in all_nodes:
         # Get only DIOs transmitted by a single node
-        all_transmitted_packets = data_after[data_after['TRANSMITTER_ID'] == node]
+        all_transmitted_packets = data_after[data_after['RECEIVER_ID'] == node]
         condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO')
         transmitted_dios = all_transmitted_packets[condition]
         # Store smallest time in which version changes
@@ -580,12 +599,12 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
     toc = tm.perf_counter()
     # Check if rank changed or not
     tic = tm.perf_counter()
-    actual_ranks = get_ranks_in_window(ranks_vers, time_step, anomalous_nodes, args)
+    actual_ranks = get_ranks_in_window(ranks_vers, time_step, anomalous_nodes, args, True)
     if len(actual_ranks) > 0:
         data_found = False
         counter = 0
         while not data_found:
-            previous_ranks = get_ranks_in_window(ranks_vers, time_step - counter - 1, anomalous_nodes, args)
+            previous_ranks = get_ranks_in_window(ranks_vers, time_step - counter - 1, anomalous_nodes, args, False)
             if len(previous_ranks) != 0:
                 data_found = True
             counter += 1
@@ -660,6 +679,9 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
                 attacker_node = find_attacker_worst_parent(nodes_and_features_dict, list_nodes_train)
                 print('\tWORST PARENT ATTACK -> ATTACKER NODE {}'.format(attacker_node))
                 output_file.write('\tWORST PARENT ATTACK -> ATTACKER NODE {}\n'.format(attacker_node))
+            else:
+                print('\tNo change in ranks/version -> False alarm')
+                output_file.write('\tFALSE ALARM\n')
         else:
             blackhole_attackers = []
             wormhole_attackers = []
