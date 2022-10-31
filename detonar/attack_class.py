@@ -665,7 +665,7 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
                     nodes_and_features_dict[node][feature_class] = True
 
     if (not change_in_communicating_nodes):
-        if (dodag_changed):
+        if (dodag_changed and (change_in_versions or change_in_ranks or change_in_nexthops)):
             if (change_in_ranks and change_in_versions):
                 attacker_node, attack_type = find_attacker_ranks_and_versions(ranks_vers, time_step, list_nodes_train,
                                                                               args)
