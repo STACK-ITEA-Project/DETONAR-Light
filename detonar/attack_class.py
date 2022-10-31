@@ -552,37 +552,6 @@ def find_attacker_worst_parent(nodes_and_features_dict, list_nodes_train):
             attacker_nodes.append(node)
     return attacker_nodes
 
-
-def check_wormhole(net_traffic, time_step, anomalous_nodes, nodes_and_features_dict, dict_nodes_dests_from_train, args):
-    change_in_destination = False
-    nodes_changing_destination = []
-    # Create empty dictionary of nodes and dests
-    dict_nodes_dests = {node: [] for node in anomalous_nodes}
-    # Get data after the anomaly
-    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
-            net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
-    data_after = net_traffic[condition]
-    names = data_after['TRANSMITTER_ID'].str.split('-', n=1, expand=True)
-    data_after.drop(columns=['TRANSMITTER_ID'], inplace=True)
-    if len(data_after) != 0:
-        data_after['TRANSMITTER_ID'] = names[1]
-        # Check each anomalous node if it has gained a next hop IP address (changing parent or destination)
-        for node in anomalous_nodes:
-            # Get destinations after anomaly
-            condition = (data_after['TRANSMITTER_ID'] == node)
-            receivers = data_after[condition]['RECEIVER_ID'].value_counts().index.to_list()
-            dict_nodes_dests[node] = receivers
-            # If a new destination appears then change it in the conditions dictionary
-            for receiver in receivers:
-                if (receiver not in dict_nodes_dests_from_train[node]):
-                    change_in_destination = True
-                    nodes_and_features_dict['change dest'] = True
-                    nodes_changing_destination.append(node)
-        if (change_in_destination):
-            print('\tNODES CHANGING DESTINATION: {}'.format(nodes_changing_destination))
-    return nodes_and_features_dict, change_in_destination, nodes_changing_destination
-
-
 def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_packets, anomalous_nodes, nodes_changing,
                                time_step, dodag_changed, list_nodes_train, dict_nodes_dests_from_train, output_file,
                                args):
@@ -626,14 +595,7 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
     nodes_and_features_dict, change_in_versions = check_versions(ranks_vers, time_step, anomalous_nodes,
                                                                  nodes_and_features_dict, args)
     toc = tm.perf_counter()
-    # Check destinations and DAOs
-    tic = tm.perf_counter()
-    nodes_and_features_dict, change_in_destination, nodes_changing_destination = check_wormhole(apps_packets, time_step,
-                                                                                                anomalous_nodes,
-                                                                                                nodes_and_features_dict,
-                                                                                                dict_nodes_dests_from_train,
-                                                                                                args)
-    toc = tm.perf_counter()
+
     # Set all nodes with corresponding dodag changed feature
     if (dodag_changed):
         for node in nodes_changing:
@@ -688,7 +650,6 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
                 output_file.write('\tFALSE ALARM\n')
         else:
             blackhole_attackers = []
-            wormhole_attackers = []
             hello_flood_attackers = []
             dis_attackers = []
             for node in anomalous_nodes:
@@ -696,9 +657,6 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
                     if (nodes_and_features_dict[node]['incoming_vs_outgoing']):
                         print('\tDevice {} -> BLACKHOLE/SEL FORWARD ATTACK!!!!!'.format(node))
                         blackhole_attackers.append(node)
-                    elif (change_in_destination and node in nodes_changing_destination):
-                        print('\tDevice {} -> WORMHOLE ATTACK!!!!!'.format(node))
-                        wormhole_attackers.append(node)
                     else:
                         print('\tDevice {} -> False alarm'.format(node))
                 elif (nodes_and_features_dict[node]['# DIO txd']):
@@ -713,13 +671,11 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
             # Print single line on output file
             if (blackhole_attackers != []):
                 output_file.write('\tBLACKHOLE/SEL FORWARD ATTACK -> ATTACKER NODE {}\n'.format(blackhole_attackers))
-            if (wormhole_attackers != []):
-                output_file.write('\tWORMHOLE ATTACK -> ATTACKER NODE {}\n'.format(wormhole_attackers))
             if (hello_flood_attackers != []):
                 output_file.write('\tHELLO FLOOD ATTACK -> ATTACKER NODE {}\n'.format(hello_flood_attackers))
             if (dis_attackers != []):
                 output_file.write('\tDIS ATTACK -> ATTACKER NODE {}\n'.format(dis_attackers))
-            if (blackhole_attackers == [] and wormhole_attackers == [] and hello_flood_attackers == [] and dis_attackers == []):
+            if (blackhole_attackers == [] and hello_flood_attackers == [] and dis_attackers == []):
                 output_file.write('\tFALSE ALARM\n')
 
 
