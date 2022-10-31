@@ -161,8 +161,10 @@ def multiple_check_communicating_nodes(net_traffic, time_step, list_nodes_train,
         data = net_traffic[condition]
         # Get list of nodes trasmitting at least 1 packet
         list_nodes = data['TRANSMITTER_ID'].value_counts().index.to_list()
-        list_nodes = [node.split('-')[-1] for node in list_nodes if 'SENSOR' in node or 'SINKNODE' in node]
+        list_nodes = [node.split('-')[-1] for node in list_nodes if 'SENSOR' in node]
         list_nodes.sort()
+        if '1' in list_nodes_train:
+            list_nodes_train.remove('1')
         list_nodes_train.sort()
         # Check if this list is equal to the obtained during training, otherwise it's clone attack
         if (not (list_nodes == list_nodes_train)):
@@ -592,6 +594,8 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
     # Create dicts for nodes and anomalies
     nodes_and_features_dict = {node_name: {feature: False for feature in all_features} for node_name in
                                list_nodes_train}
+    if '1' not in list_nodes_train:
+        nodes_and_features_dict['1'] = {feature: False for feature in all_features}
     # Check if list of communicating nodes is equal to the list obtained from training
     tic = tm.perf_counter()
     anomalous_nodes, nodes_and_features_dict, change_in_communicating_nodes = multiple_check_communicating_nodes(
