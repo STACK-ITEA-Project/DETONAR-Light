@@ -530,7 +530,7 @@ def find_attacker_ranks_and_versions(net_traffic, time_step, all_nodes, args):
                                                                                         nodes_and_versions_times_dict[
                                                                                             attacker_node]))
     if (attacker_node_ranks != [] and attacker_node_versions != []):
-        if (nodes_and_ranks_times_dict[attacker_node_ranks] < nodes_and_versions_times_dict[attacker_node_versions]):
+        if (attacker_node_versions[:] == '1') and (nodes_and_ranks_times_dict[attacker_node_ranks] < nodes_and_versions_times_dict[attacker_node_versions]):
             attacker_node = attacker_node_ranks[:]
             attack_type = 'RANK'
             print('RANK ATTACK! -> Attacker node is {}. It changed rank at {}'.format(attacker_node,
