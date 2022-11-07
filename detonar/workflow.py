@@ -18,7 +18,7 @@ class Args:
     def __init__(self):
         self.sim_time = '32400'
         self.time_window = '600'
-        self.data_dir = 'dataset/16_Nodes_NoAck'
+        self.data_dir = 'dataset/16_Nodes_Random'
         self.simulation_tool = 'Cooja'
         self.output_dir = 'output/{}s{}w{}'
         self.feat_folder = 'log/features_extracted/'
@@ -157,8 +157,8 @@ def main():
             print(cmd)
             _run_command(cmd)
 
-        print("Summarized results of all scenarios and simulation is saved in: ", os.path.join(os.getcwd(), 'log', 'results_summarized{}.txt'.format(datetime.date.today())))
-        summarize_output_files(scenarios, args)
+    print("Summarized results of all scenarios and simulation is saved in: ", os.path.join(os.getcwd(), 'log', 'results_summarized{}.txt'.format(datetime.date.today())))
+    summarize_output_files(scenarios, args)
 
 
 if __name__ == '__main__':
