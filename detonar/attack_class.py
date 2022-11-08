@@ -415,7 +415,7 @@ def find_attacker_ranks(net_traffic, time_step, all_nodes, args):
     for node in all_nodes:
         if (nodes_and_times_dict[node] < min_change_time):
             min_change_time = nodes_and_times_dict[node]
-            attacker_node = node
+            attacker_node.append(node)
     if (attacker_node != []):
         print('Attacker node is {}. It changed rank at {}'.format(attacker_node, nodes_and_times_dict[attacker_node]))
     return attacker_node
@@ -635,8 +635,8 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
                 output_file.write('\t{} ATTACK -> ATTACKER NODE {}\n'.format(attack_type, attacker_node))
             elif (change_in_ranks and not change_in_versions):
                 attacker_node = find_attacker_ranks(ranks_vers, time_step, list_nodes_train, args)
-                print('\tRANKS ATTACKS -> ATTACKER NODE {}'.format(attacker_node))
-                output_file.write('\tRANKS ATTACKS -> ATTACKER NODE {}\n'.format(attacker_node))
+                print('\tRANKS ATTACK -> ATTACKER NODE {}'.format(attacker_node))
+                output_file.write('\tRANKS ATTACK -> ATTACKER NODE {}\n'.format(attacker_node))
             elif (change_in_versions and not change_in_ranks):
                 attacker_node = find_attacker_versions(ranks_vers, time_step, list_nodes_train, args)
                 print('\tVERSION ATTACK -> ATTACKER NODE {}'.format(attacker_node))
