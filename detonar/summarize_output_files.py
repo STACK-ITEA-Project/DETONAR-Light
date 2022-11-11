@@ -9,6 +9,7 @@ class Args:
     simulation_tool = None
     output_dir = None
     feat_folder = None
+    print_each_simulation = None
 
     def __init__(self):
         self.sim_time = "32400"
@@ -17,6 +18,7 @@ class Args:
         self.simulation_tool = "Cooja"
         self.output_dir = "output/{}s{}w{}"
         self.feat_folder = 'log/features_extracted/'
+        self.print_each_simulation = False
 
 attack_names = {
     'Blackhole': 'BLACKHOLE/SEL FORWARD',
@@ -86,7 +88,7 @@ def parse_attack_line(line, last_line, last_time):
     return attack, last_line, last_time, time, attacker_node
 
 
-def process_file(file, result_file, expected_attacks_lines, scenario):
+def process_file(file, result_file, expected_attacks_lines, scenario, args):
     correctly_classified_sims = 0
     correctly_identified_attackers = 0
     f = open(file, 'r')
@@ -122,27 +124,28 @@ def process_file(file, result_file, expected_attacks_lines, scenario):
         else:
             last_time = 0
             last_line = line
-    str = ""
-    #
-    for attack in attack_dict:
-        if len(attack_dict[attack][0]) > 0:
-            times_str = ""
-            for el in attack_dict[attack][0]:
-                if el != attack_dict[attack][0][0]:
-                    times_str = times_str + ', '
-                if attack_time != 0:
-                    times_str = times_str + el
-            attackers = []
-            for node in attack_dict[attack][1]:
-                if node not in attackers:
-                    attackers.append(node)
-            nodes_str = ""
-            nodes_list = [attacker.strip("\'") for attacker in attackers]
-            for node in nodes_list:
-                nodes_str = nodes_str + node + ', '
-            str = str + attack + '(' + times_str + ', attackers: ' + nodes_str + '), '
-    f.close()
-    result_file.write('{}: {}\n'.format(sim_number, str))
+    if args.print_each_simulation:
+        str = ""
+        #
+        for attack in attack_dict:
+            if len(attack_dict[attack][0]) > 0:
+                times_str = ""
+                for el in attack_dict[attack][0]:
+                    if el != attack_dict[attack][0][0]:
+                        times_str = times_str + ', '
+                    if attack_time != 0:
+                        times_str = times_str + el
+                attackers = []
+                for node in attack_dict[attack][1]:
+                    if node not in attackers:
+                        attackers.append(node)
+                nodes_str = ""
+                nodes_list = [attacker.strip("\'") for attacker in attackers]
+                for node in nodes_list:
+                    nodes_str = nodes_str + node + ', '
+                str = str + attack + '(' + times_str + ', attackers: ' + nodes_str + '), '
+        f.close()
+        result_file.write('{}: {}\n'.format(sim_number, str))
     return correctly_classified_sims, correctly_identified_attackers
 
 
@@ -177,7 +180,7 @@ def main(args = Args()):
             correctly_classified_sims_result = 0
             correctly_identified_attackers_result = 0
             for file in filenames:
-                correctly_classified_sims, correctly_identified_attackers = process_file(file, result_file, expected_attacks_lines, scenario)
+                correctly_classified_sims, correctly_identified_attackers = process_file(file, result_file, expected_attacks_lines, scenario, args)
                 correctly_classified_sims_result += correctly_classified_sims
                 correctly_identified_attackers_result += correctly_identified_attackers
             result_file.write('Results: {}/{} correctly classified, {}/{} identified attacker\n'.format(correctly_classified_sims_result,total_sims, correctly_identified_attackers_result, total_sims))
