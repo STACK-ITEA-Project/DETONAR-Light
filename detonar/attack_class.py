@@ -459,7 +459,9 @@ def find_attacker_versions(net_traffic, time_step, all_nodes, args):
             attacker_node = node
     if (attacker_node != []):
         print('Attacker node is {}. It changed rank at {}'.format(attacker_node, nodes_and_times_dict[attacker_node]))
-    return attacker_node
+    attacker = []
+    attacker.append(attacker_node)
+    return attacker
 
 
 def find_attacker_ranks_and_versions(net_traffic, time_step, all_nodes, args):
@@ -542,7 +544,9 @@ def find_attacker_ranks_and_versions(net_traffic, time_step, all_nodes, args):
             print('VERSION ATTACK! -> Attacker node is {}. It changed version at {}'.format(attacker_node,
                                                                                             nodes_and_versions_times_dict[
                                                                                                 attacker_node]))
-    return attacker_node, attack_type
+    attacker = []
+    attacker.append(attacker_node)
+    return attacker, attack_type
 
 
 def find_attacker_worst_parent(nodes_and_features_dict, list_nodes_train):
