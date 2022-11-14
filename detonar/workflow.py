@@ -15,6 +15,7 @@ class Args:
     simulation_tool = None
     output_dir = None
     feat_folder = None
+    print_each_simulation = None
 
     def __init__(self):
         self.sim_time = '32400'
@@ -23,6 +24,7 @@ class Args:
         self.simulation_tool = 'Cooja'
         self.output_dir = 'output/{}s{}w{}'
         self.feat_folder = 'log/features_extracted/'
+        self.print_each_simulation = False
 
 def _run_command(command):
     try:
