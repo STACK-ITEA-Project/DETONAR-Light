@@ -9,7 +9,7 @@ def arg_parse():
                         help="root path to data directory")
     parser.add_argument('--scenario', type=str, default='Legitimate',
                         help="name of attack/legitimate")
-    parser.add_argument('--n_features', default=15, type=int,
+    parser.add_argument('--n_features', default=14, type=int,
                         help="number of features used")
     parser.add_argument('--time_start', default=10.0, type=float,
                         help="time window in seconds")
@@ -25,7 +25,7 @@ def arg_parse():
                         help="If not empty run feature extraction on a single simulation (Just for DEBUG purposes)")
     parser.add_argument('--time_feat_micro', default='PHY_LAYER_ARRIVAL_TIME(US)', type=str,
                         help="Feature used to check time of a packet in micro seconds")
-    parser.add_argument('--time_feat_sec', default='PHY_LAYER_ARRIVAL_TIME(S)', type=str,
+    parser.add_argument('--time_feat_sec', default='TIME', type=str,
                         help="Feature used to check time of a packet in seconds")
     parser.add_argument('--simulation_tool', default='Cooja', type=str,
                         help="Simulation tool used to get dataset: NetSim or Cooja")
@@ -56,10 +56,9 @@ def arg_parse():
     parser.add_argument('--feature_for_anomalies', default='# APP rcvd', type=str,
                         help="feature used for anomalies detection")
     parser.add_argument('--all_features',
-                        default=['# DIO rcvd', '# DIO txd', '# DAO rcvd', '# DAO txd', '# DIS rcvd', '# DIS txd',
-                                 '# APP rcvd', '# APP txd', '# different APPs', '# source IPs', '# dest IPs',
-                                 '# gateway IPs', 'Succ rate', '# broadcasted', '# neighbours', 'parent_changed',
-                                 'incoming_vs_outgoing'],
+                        default=['# DIO rcvd', '# APP rcvd', '# DAO txd', '# DIO txd', '# DIS txd', '# APP txd', '# DIS txd',
+                                  'incoming_vs_outgoing', '# ranks', 'version_changed', 'current_rank',  'current_version',
+                                 'nr_neighbours', 'neighbors','parent_changed'],
                         nargs='+', help="features to be fitted")
     parser.add_argument('--output_imgs_folder', default='log/images/non_cumulative/', type=str,
                         help="folder for features files to be stored")
@@ -70,9 +69,9 @@ def arg_parse():
 
     # Parameters attack classification
     parser.add_argument('--attack_classification_features',
-                        default=['# DIO rcvd', '# DIO txd', '# DAO txd', '# DIS txd', '# APP rcvd', '# APP txd',
-                                 'incoming_vs_outgoing', 'parent_changed', '# ranks',
-                                 'version_changed', 'active'],
+                        default=['# DIO rcvd', '# APP rcvd', '# DAO txd', '# DIO txd', '# DIS txd', '# APP txd',
+                                  'incoming_vs_outgoing', '# ranks', 'version_changed', 'current_rank',  'current_version',
+                                 'nr_neighbors', 'neighbors','changed_parent'],
                         nargs='+', help="features used for attack classification")
 
     args = parser.parse_args()

@@ -2,7 +2,8 @@ import datetime
 import glob
 import subprocess
 import os
-import parse_statistics
+from detonar import parse_statistics
+
 
 class args:
     simulation_time = 3600
@@ -99,7 +100,7 @@ for scenario in scenarios:
 output_filename = os.path.join(os.getcwd(), 'log', 'results_summarized{}.txt'.format(datetime.date.today()))
 result_file = open(output_filename, 'w')
 
-result_file.write("Summarized results for simulations of lenght {}s and {}s time window\n\n".format(args.simulation_time, args.time_window))
+result_file.write("Summarized results for simulations of length {}s and {}s time window\n\n".format(args.simulation_time, args.time_window))
 
 for scenario in scenarios:
     if os.path.exists(os.path.join(os.getcwd(), 'log', args.output_dir.format(args.simulation_time, args.time_window,datetime.date.today()), scenario)):

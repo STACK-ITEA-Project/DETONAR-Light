@@ -1,15 +1,16 @@
 # Python modules
-import pandas as pd
-import numpy as np
-import math
-import os
-import glob
-import random
-import warnings
-import multiprocessing as mp
-import time as time
 import concurrent.futures
+import glob
 import itertools
+import math
+import multiprocessing as mp
+import os
+import time as time
+import warnings
+import random
+
+import numpy as np
+import pandas as pd
 
 warnings.filterwarnings("ignore")
 # Python files
@@ -188,11 +189,11 @@ def main():
             pandas_matrix = pd.DataFrame(matrix)
             features_list = ['# DIO rcvd', '# DIO txd', '# DAO rcvd', '# DAO txd', '# DIS rcvd',
                              '# DIS txd', '# APP rcvd', '# APP txd', '# different APPs',
-                             '# source IPs', '# dest IPs', '# gateway IPs', 'Succ rate', '# broadcasted',
+                             '# source IPs', '# dest IPs', 'Succ rate', '# broadcasted',
                              'incoming_vs_outgoing']  # '# neighbours', '# next-hop IPs', 'incoming_vs_outgoing']
             pandas_matrix.columns = features_list
             # Save the csv file containing features for a single device
-            name = args.out_feat_files + '/' + args.scenario + '/simulation-' + \
+            name = args.out_feat_files + args.scenario + str(int(args.simulation_time)) + '/simulation-' + \
                    filenames[file_index].split("/")[-1].split("\\")[-1].split(".")[0] + \
                    '/' + nodes_names[node_index] + '.csv'
             # Create folder of simulation under the corresponding scenario in the folder containing features
@@ -206,7 +207,7 @@ def main():
 # Try using parallelization to extract features
 def parallelize_dataframe(df, func, n_cores=4):
     df_split = np.array_split(df, n_cores)
-    pool = Pool(n_cores)
+    pool = mp.Pool(n_cores)
     df = pd.concat(pool.map(func, df_split))
     pool.close()
     pool.join()
@@ -266,11 +267,11 @@ def parallelized_main():
             pandas_matrix = pd.DataFrame(matrix)
             features_list = ['# DIO rcvd', '# DIO txd', '# DAO rcvd', '# DAO txd', '# DIS rcvd',
                              '# DIS txd', '# APP rcvd', '# APP txd', '# different APPs',
-                             '# source IPs', '# dest IPs', '# gateway IPs', 'Succ rate', '# broadcasted',
+                             '# source IPs', '# dest IPs', 'Succ rate', '# broadcasted',
                              'incoming_vs_outgoing']  # '# neighbours', '# next-hop IPs', 'incoming_vs_outgoing']
             pandas_matrix.columns = features_list
             # Save the csv file containing features for a single device
-            name = args.out_feat_files + '/' + args.scenario + '/simulation-' + \
+            name = args.out_feat_files + args.scenario + '/' + str(int(args.simulation_time)) + '/simulation-' + \
                    filenames[file_index].split("/")[-1].split("\\")[-1].split(".")[0] + \
                    '/' + nodes_names[node_index] + '.csv'
             # Create folder of simulation under the corresponding scenario in the folder containing features
@@ -279,11 +280,15 @@ def parallelized_main():
             pandas_matrix.to_csv(name, index=False, header=True)
 
         # Storing file with DAOs only
-        dao_packets = data[data['CONTROL_PACKET_TYPE/APP_NAME'] == 'DAO']
+        #dao_packets = data[data['CONTROL_PACKET_TYPE/APP_NAME'] == 'DAO']
+
         #dao_packets = dao_packets[['SOURCE_ID', 'DESTINATION_ID', args.time_feat_micro]]
         dao_packets = dao_packets[['SOURCE_ID', 'DESTINATION_ID', args.time_feat_micro, 'RECEIVER_ID', 'TRANSMITTER_ID', 'NEXT_HOP_IP']]
+
+        #dao_packets = dao_packets[['SOURCE_ID', 'DESTINATION_ID', 'RECEIVER_ID', 'TRANSMITTER_ID', args.time_feat_micro]]
+
         dao_packets = dao_packets.rename(columns={args.time_feat_micro: args.time_feat_sec})
-        name = args.out_feat_files + '/' + args.scenario + '/simulation-' + \
+        name = args.out_feat_files + args.scenario + '/' + str(int(args.simulation_time)) + '/simulation-' + \
                filenames[file_index].split("/")[-1].split("\\")[-1].split(".")[0] + \
                '/' + 'DAOs.csv'
         # Create folder of simulation under the corresponding scenario in the folder containing features
@@ -295,7 +300,7 @@ def parallelized_main():
         dio_packets = data[data['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO']
         dio_packets = dio_packets[['TRANSMITTER_ID', 'RECEIVER_ID', args.time_feat_micro]]
         dio_packets = dio_packets.rename(columns={args.time_feat_micro: args.time_feat_sec})
-        name = args.out_feat_files + '/' + args.scenario + '/simulation-' + \
+        name = args.out_feat_files + args.scenario + '/' + str(int(args.simulation_time)) + '/simulation-' + \
                filenames[file_index].split("/")[-1].split("\\")[-1].split(".")[0] + \
                '/' + 'DIOs.csv'
         # Create folder of simulation under the corresponding scenario in the folder containing features
@@ -307,7 +312,7 @@ def parallelized_main():
         app_packets = data[data['PACKET_TYPE'] == 'Sensing']
         app_packets = app_packets[['TRANSMITTER_ID', 'RECEIVER_ID', args.time_feat_micro]]
         app_packets = app_packets.rename(columns={args.time_feat_micro: args.time_feat_sec})
-        name = args.out_feat_files + '/' + args.scenario + '/simulation-' + \
+        name = args.out_feat_files + args.scenario + '/' + str(int(args.simulation_time)) + '/simulation-' + \
                filenames[file_index].split("/")[-1].split("\\")[-1].split(".")[0] + \
                '/' + 'APPs.csv'
         # Create folder of simulation under the corresponding scenario in the folder containing features
@@ -318,7 +323,7 @@ def parallelized_main():
         # Storing file with any packet but transmitter and time only
         all_packets = data[['TRANSMITTER_ID', args.time_feat_micro, 'NEXT_HOP_IP']]
         all_packets = all_packets.rename(columns={args.time_feat_micro: args.time_feat_sec})
-        name = args.out_feat_files + '/' + args.scenario + '/simulation-' + \
+        name = args.out_feat_files + args.scenario + '/' + str(int(args.simulation_time)) + '/simulation-' + \
                filenames[file_index].split("/")[-1].split("\\")[-1].split(".")[0] + \
                '/' + 'ALL_tx_time.csv'
         # Create folder of simulation under the corresponding scenario in the folder containing features
@@ -328,10 +333,10 @@ def parallelized_main():
 
         # Storing file with control packets and ranks & versions
         ranks_vers = data[data['PACKET_TYPE'] == 'Control_Packet']
-        ranks_vers = ranks_vers[['TRANSMITTER_ID', 'CONTROL_PACKET_TYPE/APP_NAME', args.time_feat_micro, 'RPL_RANK', 'RPL_VERSION']]
+        ranks_vers = ranks_vers[['RECEIVER_ID', 'CONTROL_PACKET_TYPE/APP_NAME', args.time_feat_micro, 'RPL_RANK', 'RPL_VERSION']]
         ranks_vers = ranks_vers.rename(columns={args.time_feat_micro: args.time_feat_sec})
 
-        name = args.out_feat_files + '/' + args.scenario + '/simulation-' + \
+        name = args.out_feat_files + args.scenario +  '/' + str(int(args.simulation_time)) + '/simulation-' + \
                filenames[file_index].split("/")[-1].split("\\")[-1].split(".")[0] + \
                '/' + 'RANKS_VERS.csv'
         # Create folder of simulation under the corresponding scenario in the folder containing features

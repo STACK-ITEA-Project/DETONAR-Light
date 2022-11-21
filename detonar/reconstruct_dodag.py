@@ -37,30 +37,27 @@ def refine_edges_list(edges):
 
 
 def get_dodag(data):
-    # Get source ids and dest ids only with numbers
-    source_ids = data['SOURCE_ID'].values.tolist()
-    source_ids = [id.split("-")[-1] for id in source_ids]
-    dest_ids = data['DESTINATION_ID'].values.tolist()
-    dest_ids = [id.split("-")[-1] for id in dest_ids]
-    # Each DAO represents a potential edge
-    edges = [(source_ids[i], dest_ids[i]) for i in range(len(source_ids))]
-    # Remove duplicate potential edges and maintain the order
-    seen = set()
-    seen_add = seen.add
-    edges = [x for x in edges if not (x in seen or seen_add(x))]
-    # Get list of nodes names (order doesn't matter)
-    source_ids = list(dict.fromkeys(source_ids))
-    dest_ids = list(dict.fromkeys(dest_ids))
-    list_of_nodes = source_ids + dest_ids
-    list_of_nodes = list(dict.fromkeys(list_of_nodes))
+    # Get DAOs where source_ID == transmitter ID (the first step in the route towards the root)
+    # Receiver of these packets^ is the parent
+    source_ids = data['SOURCE_ID'].unique()
+    source_ids_short = [id.split("-")[-1] for id in source_ids]
+
+    edges = []
+    # For each node sending a DAO, find the latest DAO and add it as an edge
+    for node in source_ids:
+        all_daos = data[data['SOURCE_ID'] == node]
+        latest_condition =  all_daos['TIME'] == max(all_daos['TIME'])
+        latest_dao = all_daos[latest_condition]
+        parent = latest_dao['PARENT_ID']
+        node_short = node.split("-")[-1]
+        parent_array = parent.values
+        parent_short = parent_array[0].split("-")[-1]
+        edges.append((node_short, parent_short))
     # Use nx to obtain the graph corresponding to the dodag
     dodag = nx.Graph()
-    # Refine the list of edges in order to keep only most recent father-son relationships
-    edges = refine_edges_list(edges)
     # Build the DODAG graph from nodes and edges lists
-    dodag.add_nodes_from(list_of_nodes)
+    dodag.add_nodes_from(source_ids_short)
     dodag.add_edges_from(edges)
-
     return dodag
 
 
