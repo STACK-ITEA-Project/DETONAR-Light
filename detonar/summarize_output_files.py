@@ -3,7 +3,7 @@ import datetime
 import glob
 
 class Args:
-    sim_time = None
+    simulation_time = None
     time_window = None
     data_dir = None
     simulation_tool = None
@@ -12,7 +12,7 @@ class Args:
     print_each_simulation = None
 
     def __init__(self):
-        self.sim_time = "32400"
+        self.simulation_time = "32400"
         self.time_window = "600"
         self.data_dir = "dataset/Dataset_Random"
         self.simulation_tool = "Cooja"
@@ -166,15 +166,15 @@ def main(args = Args()):
 
     info_paths = []
     for scenario_path in scenario_paths:
-        info_paths.append(glob.glob(os.path.join(scenario_path, "Packet_Trace_{}s".format(args.sim_time), '*.txt'))[0])
+        info_paths.append(glob.glob(os.path.join(scenario_path, "Packet_Trace_{}s".format(args.simulation_time), '*.txt'))[0])
 
     # For each scenario, process output file for each simulation
     for scenario in scenarios:
         info_file_path = [path for path in info_paths if scenario in path]
         expected_attacks_lines = get_expected_attacks_lines(info_file_path, args)
 
-        if os.path.exists(os.path.join(os.getcwd(), 'log', args.output_dir.format(args.sim_time, args.time_window, "2022-11-12"), scenario)):
-            filenames = glob.glob(os.path.join(os.getcwd(), 'log', args.output_dir.format(args.sim_time, args.time_window, "2022-11-12"), scenario, '*'))
+        if os.path.exists(os.path.join(os.getcwd(), 'log', args.output_dir.format(args.simulation_time, args.time_window, "2022-11-12"), scenario)):
+            filenames = glob.glob(os.path.join(os.getcwd(), 'log', args.output_dir.format(args.simulation_time, args.time_window, "2022-11-12"), scenario, '*'))
             result_file.write('{}\n'.format(scenario))
             # Variables for printing statistics for each scenario
             total_sims = len(filenames)
