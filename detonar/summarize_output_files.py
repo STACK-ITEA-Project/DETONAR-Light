@@ -14,11 +14,11 @@ class Args:
     def __init__(self):
         self.sim_time = "32400"
         self.time_window = "600"
-        self.data_dir = "dataset/Dataset_Random"
+        self.data_dir = "dataset/test_dataset"
         self.simulation_tool = "Cooja"
         self.output_dir = "output/{}s{}w{}"
         self.feat_folder = 'log/features_extracted/'
-        self.print_each_simulation = False
+        self.print_each_simulation = True
 
 attack_names = {
     'Blackhole': 'BLACKHOLE/SEL FORWARD',
@@ -91,6 +91,8 @@ def parse_attack_line(line, last_line, last_time):
 def process_file(file, result_file, expected_attacks_lines, scenario, args):
     correctly_classified_sims = 0
     correctly_identified_attackers = 0
+    alarm_raised = False
+    early_alarm_raised = False
     f = open(file, 'r')
     lines = f.readlines()
 
@@ -119,6 +121,10 @@ def process_file(file, result_file, expected_attacks_lines, scenario, args):
                 if int(attack_time) > int(expected_attack_time) / 1000000 and (attack == attack_names[scenario]) and not first_correct_attack:
                     first_correct_attack = True
                     correctly_classified_sims += 1
+                elif int(attack_time) > int(expected_attack_time) / 1000000:
+                    alarm_raised = True
+                elif int(attack_time) < int(expected_attack_time) / 1000000:
+                    early_alarm_raised = True
 
 
         else:
@@ -146,7 +152,7 @@ def process_file(file, result_file, expected_attacks_lines, scenario, args):
                 str = str + attack + '(' + times_str + ', attackers: ' + nodes_str + '), '
         f.close()
         result_file.write('{}: {}\n'.format(sim_number, str))
-    return correctly_classified_sims, correctly_identified_attackers
+    return correctly_classified_sims, correctly_identified_attackers, alarm_raised, early_alarm_raised
 
 
 def main(args = Args()):
@@ -179,11 +185,18 @@ def main(args = Args()):
             # Parse each output file
             correctly_classified_sims_result = 0
             correctly_identified_attackers_result = 0
+            alarms_raised = 0
+            early_alarms_raised = 0
             for file in filenames:
-                correctly_classified_sims, correctly_identified_attackers = process_file(file, result_file, expected_attacks_lines, scenario, args)
+                correctly_classified_sims, correctly_identified_attackers, alarm_raised, early_alarm_raised = process_file(file, result_file, expected_attacks_lines, scenario, args)
                 correctly_classified_sims_result += correctly_classified_sims
                 correctly_identified_attackers_result += correctly_identified_attackers
+                if alarm_raised:
+                    alarms_raised += 1
+                if early_alarm_raised:
+                    early_alarms_raised += 1
             result_file.write('Results: {}/{} correctly classified, {}/{} identified attacker\n'.format(correctly_classified_sims_result,total_sims, correctly_identified_attackers_result, total_sims))
+            result_file.write('{}/{} alarms raised, {}/{} false positives before alarm \n'.format(alarms_raised, total_sims, early_alarms_raised, total_sims))
             result_file.write('\n')
 
     result_file.close()
