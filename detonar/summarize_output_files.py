@@ -14,9 +14,10 @@ class Args:
     def __init__(self):
         self.sim_time = "32400"
         self.time_window = "600"
-        self.data_dir = "dataset/test_dataset"
+        self.data_dir = "dataset/16_Nodes_NoAck"
         self.simulation_tool = "Cooja"
-        self.output_dir = "output/{}s{}w{}"
+        #self.output_dir = "output/{}s{}w{}_noAck"
+        self.output_dir = "output/32400s600w2022-11-23_noAck"
         self.feat_folder = 'log/features_extracted/'
         self.print_each_simulation = True
 
@@ -31,6 +32,7 @@ attack_names = {
     'Hello_Flood': 'HELLO FLOOD',
     'Sinkhole': 'RANKS',
     'Ranks': 'RANKS',
+    'Rank': 'RANKS',
     'Continuous_Sinkhole': 'RANKS',
     'Local_Repair': 'RANKS',
     'Version': 'VERSION',
@@ -101,6 +103,7 @@ def process_file(file, result_file, expected_attacks_lines, scenario, args):
     # Remove filetype
     sim_number = filename.split('.')[0]
     if scenario != 'Legit':
+        # Example of expected result line: "00005 - attacker:  13 at time: 26114451856"
         expected_result_line = [line for line in expected_attacks_lines if sim_number in line]
         expected_attacker = expected_result_line[0].split('-')[-1].split('attacker: ')[-1].split('at')[0].rstrip().lstrip()
         expected_attack_time = expected_result_line[0].split('time: ')[-1].rstrip().lstrip()
@@ -121,7 +124,7 @@ def process_file(file, result_file, expected_attacks_lines, scenario, args):
                 if int(attack_time) > int(expected_attack_time) / 1000000 and (attack == attack_names[scenario]) and not first_correct_attack:
                     first_correct_attack = True
                     correctly_classified_sims += 1
-                elif int(attack_time) > int(expected_attack_time) / 1000000:
+                if int(attack_time) > int(expected_attack_time) / 1000000:
                     alarm_raised = True
                 elif int(attack_time) < int(expected_attack_time) / 1000000:
                     early_alarm_raised = True
