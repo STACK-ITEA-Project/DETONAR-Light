@@ -415,9 +415,12 @@ def find_attacker_ranks(net_traffic, time_step, all_nodes, args):
     for node in all_nodes:
         if (nodes_and_times_dict[node] < min_change_time):
             min_change_time = nodes_and_times_dict[node]
-            attacker_node.append(node)
+            if len(attacker_node) == 0:
+                attacker_node.append(node)
+            else:
+                attacker_node[0] = node
     if (attacker_node != []):
-        print('Attacker node is {}. It changed rank at {}'.format(attacker_node, nodes_and_times_dict[attacker_node]))
+        print('Attacker node is {}. It first changed rank at {}'.format(attacker_node[0], nodes_and_times_dict[attacker_node]))
     return attacker_node
 
 
