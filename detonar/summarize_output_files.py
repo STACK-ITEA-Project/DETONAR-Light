@@ -1,6 +1,7 @@
 import os
 import datetime
 import glob
+import math
 
 class Args:
     sim_time = None
@@ -14,12 +15,12 @@ class Args:
     def __init__(self):
         self.sim_time = "32400"
         self.time_window = "600"
-        self.data_dir = "dataset/16_Nodes_NoAck"
+        self.data_dir = "dataset/Dataset_Random"
         self.simulation_tool = "Cooja"
         #self.output_dir = "output/{}s{}w{}_noAck"
-        self.output_dir = "output/32400s600w2022-11-23_noAck"
+        self.output_dir = "output/{}s{}w{}"
         self.feat_folder = 'log/features_extracted/'
-        self.print_each_simulation = True
+        self.print_each_simulation = False
 
 attack_names = {
     'Blackhole': 'BLACKHOLE/SEL FORWARD',
@@ -67,7 +68,7 @@ def parse_attack_line(line, last_line, last_time):
     if 'RANK' in attack:
         attack = 'RANKS'
     # Make sure attacker nodes are returned as list of strings
-    nodes = attacker_node.split('[')[-1].split(']')[0].rstrip().lstrip()  # fe '7' or '8','3','2'
+    nodes = attacker_node.split('[')[-1].split(']')[0].strip('\"').rstrip().lstrip()  # fe '7' or '8','3','2'
     if ',' in nodes:
         nodes = nodes.split(',')
     else:
@@ -79,27 +80,27 @@ def parse_attack_line(line, last_line, last_time):
     else:
         time = last_line.split('time')[-1].split('.0. Devices')[0].rstrip().lstrip()
     if len(nodes) == 1:
-        clean_node = nodes[0].strip('\"')
-        attacker_node = clean_node
+        if 'ATTACKER NODE: ' in nodes[0]:
+            nodes[0] = nodes[0].split('ATTACKER NODE: ')[1]
+        clean_node = nodes[0].strip('\"').strip('\'')
+        attacker_nodes.append(clean_node)
     else:
         for node in nodes:
-            clean_node = node.split('\'')[1]
-            if clean_node not in attacker_nodes:
-                attacker_node = clean_node
-
-    return attack, last_line, last_time, time, attacker_node
+            clean_node = node.strip('\"').rstrip().lstrip().strip('\'')
+            attacker_nodes.append(clean_node)
+    return attack, last_line, last_time, time, attacker_nodes
 
 
-def process_file(file, result_file, expected_attacks_lines, scenario, args):
+def process_file(scenario_file, result_file, expected_attacks_lines, scenario, args):
     correctly_classified_sims = 0
     correctly_identified_attackers = 0
     alarm_raised = False
     early_alarm_raised = False
-    f = open(file, 'r')
+    f = open(scenario_file, 'r')
     lines = f.readlines()
 
     # Get last part of path
-    filename = file.split('/')[-1]
+    filename = scenario_file.split('/')[-1]
     # Remove filetype
     sim_number = filename.split('.')[0]
     if scenario != 'Legit':
@@ -107,7 +108,8 @@ def process_file(file, result_file, expected_attacks_lines, scenario, args):
         expected_result_line = [line for line in expected_attacks_lines if sim_number in line]
         expected_attacker = expected_result_line[0].split('-')[-1].split('attacker: ')[-1].split('at')[0].rstrip().lstrip()
         expected_attack_time = expected_result_line[0].split('time: ')[-1].rstrip().lstrip()
-
+    else:
+        expected_attack_time = 32400*1000000
     attack_dict = {'BLACKHOLE/SEL FORWARD': [[], []], 'CLONE-ID or SYBIL': [[], []], 'DIS': [[], []],
                    'HELLO FLOOD': [[], []], 'RANKS': [[], []],
                    'VERSION': [[], []], 'WORMHOLE': [[], []], 'WORST PARENT': [[], []]}
@@ -115,27 +117,25 @@ def process_file(file, result_file, expected_attacks_lines, scenario, args):
     # Get information from lines with "ATTACK"
     for line in lines:
         if 'ATTACK' in line:
-            attack, last_line, last_time, attack_time, attacker_node = parse_attack_line(line, last_line, last_time)
+            attack, last_line, last_time, attack_time, attacker_nodes = parse_attack_line(line, last_line, last_time)
             attack_dict[attack][0].append(attack_time)
-            attack_dict[attack][1].append(attacker_node)
+            [attack_dict[attack][1].append(attacker_node) for attacker_node in attacker_nodes]
             if scenario != 'Legit':
-                if (expected_attacker in attacker_node) and correctly_identified_attackers == 0:
+                if (expected_attacker in attacker_nodes) and correctly_identified_attackers == 0:
                     correctly_identified_attackers += 1
                 if int(attack_time) > int(expected_attack_time) / 1000000 and (attack == attack_names[scenario]) and not first_correct_attack:
                     first_correct_attack = True
                     correctly_classified_sims += 1
                 if int(attack_time) > int(expected_attack_time) / 1000000:
                     alarm_raised = True
-                elif int(attack_time) < int(expected_attack_time) / 1000000:
-                    early_alarm_raised = True
-
-
+            if int(attack_time) < int(expected_attack_time) / 1000000:
+                early_alarm_raised = True
+             
         else:
             last_time = 0
             last_line = line
     if args.print_each_simulation:
-        str = ""
-        #
+        print_str = ""
         for attack in attack_dict:
             if len(attack_dict[attack][0]) > 0:
                 times_str = ""
@@ -145,16 +145,16 @@ def process_file(file, result_file, expected_attacks_lines, scenario, args):
                     if attack_time != 0:
                         times_str = times_str + el
                 attackers = []
-                for node in attack_dict[attack][1]:
+                for node in attack_dict[attack][1]: 
                     if node not in attackers:
                         attackers.append(node)
                 nodes_str = ""
                 nodes_list = [attacker.strip("\'") for attacker in attackers]
                 for node in nodes_list:
                     nodes_str = nodes_str + node + ', '
-                str = str + attack + '(' + times_str + ', attackers: ' + nodes_str + '), '
+                print_str = print_str + attack + '(' + times_str + ', attackers: ' + nodes_str + '), '
         f.close()
-        result_file.write('{}: {}\n'.format(sim_number, str))
+        result_file.write('{}: {}\n'.format(sim_number, print_str))
     return correctly_classified_sims, correctly_identified_attackers, alarm_raised, early_alarm_raised
 
 
