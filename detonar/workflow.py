@@ -23,12 +23,12 @@ class Args:
     time_feat_micro = None
     max_nr_neighbors = None
     def __init__(self):
-        self.simulation_time = 32400
+        self.simulation_time = 29400
         self.time_window = 600
-        self.data_dir = 'dataset/test_dataset'
+        self.data_dir = 'dataset/Dataset_Random'
         self.simulation_tool = 'Cooja'
         self.output_dir = 'output/{}s{}w{}'
-        self.feat_folder = 'log/features_extracted/'
+        self.feat_folder = 'extended_features/'
         self.print_each_simulation = False
         self.time_feat_micro = 'TIME'
         self.time_feat_seconds = 'TIME'
@@ -55,8 +55,20 @@ def _get_simulations(scenario, args):
             clean_sim = sim.split('/')[-1]
             sim_number = clean_sim.split('_')[0]
             simulations.append(sim_number)
-
     return simulations
+
+def _get_simulations_csv(scenario, args):
+    sims_all = glob.glob(os.path.join(os.getcwd(), '..', args.data_dir, scenario,
+                                  'Packet_Trace_' + str(args.simulation_time) + 's', '*.csv'))
+    sims = [sim for sim in sims_all if scenario in sim]
+    simulations = []
+    if len(sims) > 0:
+        for sim in sims:
+            clean_sim = sim.split('/')[-1]
+            sim_number = clean_sim.split('.')[0].split('_')[0]
+            simulations.append(sim_number)
+
+    return list(set(simulations))
 
 def main():
 
@@ -75,20 +87,14 @@ def main():
         scenario = path.split('/')[-1]
         scenarios.append(scenario)
 
-    # Perform feature extraction
-    '''
-    Running f.e:
-    ...? 
-    '''
-    # TODO: Parse statistics instead
+    # Parse statistics (instead of feature extraction)
     for scenario in scenarios:
         print("Parse statistics for scenario:", scenario, "\n")
-        simulations = _get_simulations(scenario, args)
+        simulations = _get_simulations_csv(scenario, args)
         for sim in simulations:
             args.chosen_simulation = sim
             args.scenario = scenario
             parse_statistics.main(args)
-        #os.system(feature_cmd.format(scenario, args.simulation_time, args.time_window, args.data_dir, args.simulation_tool, args.time_window))
 
     print("Running IDS\n")
     print("Result for each scenario and simulation is saved in: ", os.path.join(os.getcwd(), 'log',
