@@ -14,12 +14,11 @@ class Args:
     def __init__(self):
         self.sim_time = "32400"
         self.time_window = "600"
-        self.data_dir = "dataset/16_Nodes_NoAck"
+        self.data_dir = "dataset/Dataset_Random"
         self.simulation_tool = "Cooja"
-        #self.output_dir = "output/{}s{}w{}_noAck"
-        self.output_dir = "output/32400s600w2022-11-23_noAck"
+        self.output_dir = "output/{}s{}w{}"
         self.feat_folder = 'log/features_extracted/'
-        self.print_each_simulation = True
+        self.print_each_simulation = False
 
 attack_names = {
     'Blackhole': 'BLACKHOLE/SEL FORWARD',
@@ -107,7 +106,8 @@ def process_file(file, result_file, expected_attacks_lines, scenario, args):
         expected_result_line = [line for line in expected_attacks_lines if sim_number in line]
         expected_attacker = expected_result_line[0].split('-')[-1].split('attacker: ')[-1].split('at')[0].rstrip().lstrip()
         expected_attack_time = expected_result_line[0].split('time: ')[-1].rstrip().lstrip()
-
+    else:
+        expected_attack_time = 32400000000
     attack_dict = {'BLACKHOLE/SEL FORWARD': [[], []], 'CLONE-ID or SYBIL': [[], []], 'DIS': [[], []],
                    'HELLO FLOOD': [[], []], 'RANKS': [[], []],
                    'VERSION': [[], []], 'WORMHOLE': [[], []], 'WORST PARENT': [[], []]}
@@ -126,8 +126,8 @@ def process_file(file, result_file, expected_attacks_lines, scenario, args):
                     correctly_classified_sims += 1
                 if int(attack_time) > int(expected_attack_time) / 1000000:
                     alarm_raised = True
-                elif int(attack_time) < int(expected_attack_time) / 1000000:
-                    early_alarm_raised = True
+            if int(attack_time) < int(expected_attack_time) / 1000000:
+                early_alarm_raised = True
 
 
         else:
