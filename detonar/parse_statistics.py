@@ -79,10 +79,10 @@ def parse_stats(args):
     active_dict = {time_step: [] for time_step in range(int(args.simulation_time/args.time_window))}
 
     for node in nodes_names:
-        if(not os.path.exists('extended_features/{}/{}/{}'.format(args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation))):
-            os.makedirs('extended_features/{}/{}/{}'.format(args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation))
+        if(not os.path.exists('{}/{}/{}/{}'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation))):
+            os.makedirs('{}/{}/{}/{}'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation))
         neighbor_list = []
-        with open('extended_features/{}/{}/{}/{}_{}.csv'.format(args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'stats'), 'w') as output_file:
+        with open('{}/{}/{}/{}/{}_{}.csv'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'stats'), 'w') as output_file:
             # Write column names to output file
             writer = csv.writer(output_file)
             writer.writerow(features_list)
@@ -147,13 +147,13 @@ def parse_stats(args):
                 writer.writerow(features)
 
         # Create file from active-dict
-        with open('extended_features/{}/{}/{}/{}.csv'.format(args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, 'active'), 'w') as active_file:
+        with open('{}/{}/{}/{}/{}.csv'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, 'active'), 'w') as active_file:
             writer = csv.writer(active_file)
             writer.writerow(nodes_names)
             writer.writerows(active_dict.values())
 
         # Create neighbors-file for each node
-        with open('extended_features/{}/{}/{}/{}_{}.csv'.format(args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'neighbors'), 'w') as neighbor_file:
+        with open('{}/{}/{}/{}/{}_{}.csv'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'neighbors'), 'w') as neighbor_file:
             writer = csv.writer(neighbor_file)
             columns_neighbors = [i for i in range(args.max_nr_neighbors)]
             writer.writerow(columns_neighbors)
@@ -167,22 +167,8 @@ def parse_stats(args):
                         row[i] = 0
                 writer.writerow(row)
 
-        # Create dao-file for each node TODO: Probably not needed?
-        with open('extended_features/{}/{}/{}/{}_{}.csv'.format(args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'dao'), 'w') as dao_file:
-            writer = csv.writer(dao_file)
-            columns_daos = ['TIME', 'PACKET_TYPE', 'CONTROL_PACKET_TYPE/APP_NAME', 'SOURCE_ID', 'DESTINATION_ID',
-                            'PARENT_ID', 'SOURCE_IP', 'DESTINATION_IP', 'PARENT_IP']
-            all_daos = get_data(
-            os.path.join(os.getcwd(), '..', args.data_dir, args.scenario, 'Packet_Trace_{}s'.format(args.simulation_time),
-                 args.chosen_simulation + '_dao.csv'))
-
-            # Get all daos transmitted by node
-            id_condition = all_daos['SOURCE_ID'] == node
-            daos = all_daos[id_condition]
-            daos.to_csv(dao_file, index=False)
-
         # Create a file of all DAOs sent
-        with open('extended_features/{}/{}/{}/{}.csv'.format(args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, 'all_DAOs'), 'w') as daos_file:
+        with open('{}/{}/{}/{}/{}.csv'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, 'all_DAOs'), 'w') as daos_file:
             writer = csv.writer(daos_file)
             columns_daos = ['TIME', 'PACKET_TYPE', 'CONTROL_PACKET_TYPE/APP_NAME', 'SOURCE_ID', 'DESTINATION_ID',
                             'PARENT_ID', 'SOURCE_IP', 'DESTINATION_IP', 'PARENT_IP']
@@ -194,19 +180,19 @@ def parse_stats(args):
 
 
         # Create column of whether node changed parent for timestep or not
-        columns = ['changed_parent']
         changed_parent = [0 for i in range(int(args.simulation_time/args.time_window))]
         last_parent_id = ""
-        for row in daos.iterrows():
+        for row in all_daos.iterrows():
             parent = row[-1]['PARENT_ID']
             if not parent == last_parent_id:
                 time = row[-1]['TIME'] # TODO: Is this the correct timestep?
                 time_step = int((time/1e6)/args.time_window)
                 changed_parent[time_step] = 1
             last_parent_id = row[-1]['PARENT_ID']
-        stats_csv = pd.read_csv('extended_features/{}/{}/{}/{}_{}.csv'.format(args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'stats'), index_col=False)
+        stats_csv = pd.read_csv('{}/{}/{}/{}/{}_{}.csv'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'stats'), index_col=False)
+        #print("node: ", node, ", stats_csv columns: ", len(stats_csv.columns), ", nr of rows: ", len(stats_csv[stats_csv.columns[0]]), ", changed parent length: ", len(changed_parent))
         stats_csv.insert(13, 'changed_parent', changed_parent)
-        stats_csv.to_csv('extended_features/{}/{}/{}/{}_{}.csv'.format(args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'stats'))
+        stats_csv.to_csv('{}/{}/{}/{}/{}_{}.csv'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'stats'))
 
 
 
