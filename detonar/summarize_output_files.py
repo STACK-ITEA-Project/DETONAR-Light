@@ -177,7 +177,7 @@ def main(args = Args()):
         expected_attacks_lines = get_expected_attacks_lines(info_file_path, args)
 
         if os.path.exists(os.path.join(os.getcwd(), 'log', args.output_dir.format(args.simulation_time, args.time_window, datetime.date.today()), scenario)):
-            filenames = glob.glob(os.path.join(os.getcwd(), 'log', args.output_dir.format(args.simulation_time, args.time_window, datetime.date.today()), scenario, args.simulation_time, '*'))
+            filenames = glob.glob(os.path.join(os.getcwd(), 'log', args.output_dir.format(args.simulation_time, args.time_window, datetime.date.today()), scenario, str(args.simulation_time), '*'))
             result_file.write('{}\n'.format(scenario))
             # Variables for printing statistics for each scenario
             total_sims = len(filenames)
