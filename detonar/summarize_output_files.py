@@ -12,11 +12,11 @@ class Args:
     print_each_simulation = None
 
     def __init__(self):
-        self.simulation_time = "32400"
+        self.simulation_time = "27000"
         self.time_window = "600"
         self.data_dir = "dataset/Dataset_Random_Stats_35"
         self.simulation_tool = "Cooja"
-        self.output_dir = "output/32400s600w2022-11-24"
+        self.output_dir = "output/{}s{}w{}"
         #self.output_dir = "output/{}s{}w{}"
         self.feat_folder = 'log/features_extracted/'
         self.print_each_simulation = False
@@ -177,7 +177,7 @@ def main(args = Args()):
         expected_attacks_lines = get_expected_attacks_lines(info_file_path, args)
 
         if os.path.exists(os.path.join(os.getcwd(), 'log', args.output_dir.format(args.simulation_time, args.time_window, datetime.date.today()), scenario)):
-            filenames = glob.glob(os.path.join(os.getcwd(), 'log', args.output_dir.format(args.simulation_time, args.time_window, datetime.date.today()), scenario, '*'))
+            filenames = glob.glob(os.path.join(os.getcwd(), 'log', args.output_dir.format(args.simulation_time, args.time_window, datetime.date.today()), scenario, args.simulation_time, '*'))
             result_file.write('{}\n'.format(scenario))
             # Variables for printing statistics for each scenario
             total_sims = len(filenames)

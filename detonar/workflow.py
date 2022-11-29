@@ -12,6 +12,7 @@ from detonar import parse_statistics
 class Args:
     simulation_time = None
     time_window = None
+    time_start = None
     data_dir = None
     simulation_tool = None
     output_dir = None
@@ -23,9 +24,10 @@ class Args:
     time_feat_micro = None
     max_nr_neighbors = None
     def __init__(self):
-        self.simulation_time = 29400
+        self.simulation_time = 27000
         self.time_window = 600
-        self.data_dir = 'dataset/Dataset_Random'
+        self.time_start = 600
+        self.data_dir = 'dataset/Dataset_Random_Stats_35'
         self.simulation_tool = 'Cooja'
         self.output_dir = 'output/{}s{}w{}'
         self.feat_folder = 'extended_features/'

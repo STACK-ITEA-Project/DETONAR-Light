@@ -18,17 +18,17 @@ class Args:
     time_feat_micro = None
     max_nr_neighbors = None
     def __init__(self):
-        self.simulation_time = 32400
+        self.simulation_time = 27000
         self.time_window = 600
         self.time_start = 600
-        self.data_dir = 'dataset/test_dataset'
+        self.data_dir = 'dataset/Dataset_Random_Stats_35'
         self.simulation_tool = 'Cooja'
         self.output_dir = 'output/{}s{}w{}'
         self.feat_folder = 'log/features_extracted/'
-        self.chosen_simulation = '00001'
+        self.chosen_simulation = '00070'
         self.time_feat_micro = 'TIME'
         self.time_feat_seconds = 'TIME'
-        self.scenario = 'Blackhole'
+        self.scenario = 'Selective_Forward'
         self.max_nr_neighbors = 15
 
 
@@ -36,16 +36,6 @@ class Args:
 def get_data(path_to_file):
     # Read csv file
     data = pd.read_csv(path_to_file, index_col=False)
-    # For each column check if it contains a time value in micro seconds, if so bring it to seconds
-    for column in data.columns:
-        if ('US' in column): # TODO: should this be done for column TIME???
-            # Sometimes time values are cut due to NetSim simulator so we need to replace them with nan values
-            if (data[column].dtype == object):
-                data[column] = data[column].replace('N', np.nan, regex=True)
-                data[column] = data[column].replace('Na', np.nan, regex=True)
-                data[column] = data[column].replace('', np.nan, regex=True)
-                data[column] = pd.to_numeric(data[column])
-            data[column] = data[column] / 1e6
     return data
 
 def get_unique_nodes_names(data):
@@ -60,10 +50,11 @@ def get_unique_nodes_names(data):
 def get_time_window_data(data, index, args, full_data=False): # TODO: Rätt sätt att hämta ut data från tidsfönstret
     time_window = args.time_window
     if (full_data):
-        start_time = 0 # TODO: was "time_start * 1e6"
+        start_time = args.time_start * 1e6 # TODO: was "time_start * 1e6"
     else:
-        start_time = (index * time_window) * 1e6 # TODO: was index * time_window + "time_start * 1e6"
-    end_time = ((index + 1) * time_window) * 1e6 # TODO: was index * time_window + "time_start * 1e6"
+        start_time = index * time_window* 1e6 + args.time_start * 1e6
+        #start_time = (index * time_window) * 1e6 # TODO: was index * time_window + "time_start * 1e6"
+    end_time = ((index + 1) * time_window) * 1e6 + args.time_start * 1e6 # TODO: was index * time_window + "time_start * 1e6"
     # Get all packets that have been received at the network layer between start and end time (depending on window size)
     condition = (data[args.time_feat_micro] > start_time) & (data[args.time_feat_micro] <= end_time)
     sequence = data[condition]
@@ -102,7 +93,6 @@ def parse_stats(args):
                 if stats.empty:
                     # Node didn't send any packets in this time window
                     active_dict[index].append(False)
-                    break
                 else:
                     active_dict[index].append(True)
                     # Get number of DIO received
@@ -135,7 +125,7 @@ def parse_stats(args):
                     # Current version
                     features[10] = stats['CURRENT_VERSION'].iat[-1]
                     # Nr of neighbors
-                    features[11] = stats['NR_NEIGHBORS'].sum() # TODO: Detta måste göra på något annat sätt. pga det kan vara samma neighbors? Hur?
+                    features[11] = stats['NR_NEIGHBORS'].sum()
                     # List of neighbors
                     for i in range(len(stats['NEIGHBORS'])):
                         nbrs = ast.literal_eval(list(stats['NEIGHBORS'])[i])
