@@ -371,10 +371,6 @@ def parallel_main():
     DIO_features = [str(i) for i in range(15)]
     dios = all_dios_dict(dio_files, DIO_features, args)
 
-    # Pick "active" file
-    active_file = [item for item in all_files if 'active' in item]
-    active = pd.read_csv(active_file[0])
-
     # Remove file containing DAOs and neighbors
     all_files = [item for item in all_files if ('SENSOR' in item or 'SINKNODE') and 'stats' in item]
     all_series_attack_classification = all_series_dict(all_files, args)
@@ -499,7 +495,6 @@ def parallel_main():
 
             # Classify the attack
             classify_attack_from_dodag(all_series_attack_classification,
-                                       active,
                                        anomalous_nodes_full_name,
                                        nodes_changing,  # anomalous_nodes_full_name,
                                        time_step + train_length, dodag_changed, list_communicating_nodes_from_train,

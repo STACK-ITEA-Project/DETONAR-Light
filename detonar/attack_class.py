@@ -357,7 +357,7 @@ def find_attacker_worst_parent(nodes_and_features_dict, list_nodes_train):
         if (nodes_and_features_dict[node]['parent_changed']):
             attacker_nodes.append(node)
     return attacker_nodes
-def classify_attack_from_dodag(features_series, active, anomalous_nodes, nodes_changing,
+def classify_attack_from_dodag(features_series, anomalous_nodes, nodes_changing,
                                time_step, dodag_changed, list_nodes_train, output_file,
                                args):
     # Create list of features for attack classification
