@@ -85,7 +85,7 @@ def parse_attack_line(line, last_line, last_time):
         for node in nodes:
             clean_node = node.strip('\"').rstrip().lstrip().strip('\'')
             attacker_nodes.append(clean_node)
-    return attack, last_line, last_time, time, attacker_node
+    return attack, last_line, last_time, time, attacker_nodes
 
 def process_file(sim_file, result_file, expected_attacks_lines, scenario, args):
     correctly_classified_sims = 0
