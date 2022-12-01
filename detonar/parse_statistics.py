@@ -21,14 +21,14 @@ class Args:
         self.simulation_time = 27000
         self.time_window = 600
         self.time_start = 600
-        self.data_dir = 'dataset/Dataset_Random_Stats_40'
+        self.data_dir = 'dataset/test_dataset'
         self.simulation_tool = 'Cooja'
         self.output_dir = 'output/{}s{}w{}'
         self.feat_folder = 'log/features_extracted/'
         self.chosen_simulation = '00001'
         self.time_feat_micro = 'TIME'
         self.time_feat_seconds = 'TIME'
-        self.scenario = 'Version'
+        self.scenario = 'Blackhole'
         self.max_nr_neighbors = 15
 
 
@@ -52,9 +52,9 @@ def get_time_window_data(data, index, args, full_data=False): # TODO: Rätt sät
     if (full_data):
         start_time = args.time_start * 1e6
     else:
-        start_time = index * time_window* 1e6 + args.time_start * 1e6
+        start_time = index * time_window* 1e6 #+ args.time_start * 1e6
         #start_time = (index * time_window) * 1e6
-    end_time = ((index + 1) * time_window) * 1e6 + args.time_start * 1e6
+    end_time = ((index + 1) * time_window) * 1e6 #+ args.time_start * 1e6
     # Get all packets that have been received at the network layer between start and end time (depending on window size)
     condition = (data[args.time_feat_micro] > start_time) & (data[args.time_feat_micro] <= end_time)
     sequence = data[condition]
@@ -165,9 +165,10 @@ def parse_stats(args):
 
 
         # Create column of whether node changed parent for timestep or not
-        changed_parent = [0 for i in range(int(args.simulation_time/args.time_window))]
+        changed_parent = np.zeros(int(args.simulation_time/args.time_window), dtype=int)
         last_parent_id = ""
-        for row in all_daos.iterrows():
+        node_daos = all_daos[all_daos['SOURCE_ID'] == node]
+        for row in node_daos.iterrows():
             parent = row[-1]['PARENT_ID']
             if not parent == last_parent_id:
                 time = row[-1]['TIME'] # TODO: Is this the correct timestep?
