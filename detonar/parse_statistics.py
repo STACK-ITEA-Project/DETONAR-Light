@@ -21,14 +21,14 @@ class Args:
         self.simulation_time = 27000
         self.time_window = 600
         self.time_start = 600
-        self.data_dir = 'dataset/Dataset_Random_Stats_35'
+        self.data_dir = 'dataset/Dataset_Random_Stats_40'
         self.simulation_tool = 'Cooja'
         self.output_dir = 'output/{}s{}w{}'
         self.feat_folder = 'log/features_extracted/'
-        self.chosen_simulation = '00070'
+        self.chosen_simulation = '00001'
         self.time_feat_micro = 'TIME'
         self.time_feat_seconds = 'TIME'
-        self.scenario = 'Selective_Forward'
+        self.scenario = 'Version'
         self.max_nr_neighbors = 15
 
 
@@ -61,13 +61,11 @@ def get_time_window_data(data, index, args, full_data=False): # TODO: Rätt sät
     return sequence
 
 def parse_stats(args):
-    features_list = ['# DIO rcvd', '# APP rcvd', '# DAO txd','# DIO txd', '# DIS txd',  '# APP txd', 'incoming_vs_outgoing',
-                '# ranks', 'version_changed', 'current_rank', 'current_version', 'nr_neighbors', 'neighbors']
+    features_list = ['# DIO rcvd', '# APP rcvd', '# DAO txd','# DIO txd', '# DIS txd',  '# APP txd',
+                'current_rank', 'current_version','rank_change_time', 'version_change_time','incoming_vs_outgoing']
 
     data = get_data(os.path.join(os.getcwd(), '..', args.data_dir, args.scenario, 'Packet_Trace_{}s'.format(args.simulation_time), args.chosen_simulation+'_stats.csv'))
     nodes_names = get_unique_nodes_names(data)
-
-    active_dict = {time_step: [] for time_step in range(int(args.simulation_time/args.time_window))}
 
     for node in nodes_names:
         if(not os.path.exists('{}/{}/{}/{}'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation))):
@@ -90,11 +88,7 @@ def parse_stats(args):
                 neighbors = []
                 # Get transmitted, received and all packets within the time window
                 stats = get_time_window_data(stats_packets, index, args, full_data=False)
-                if stats.empty:
-                    # Node didn't send any packets in this time window
-                    active_dict[index].append(False)
-                else:
-                    active_dict[index].append(True)
+                if not stats.empty:
                     # Get number of DIO received
                     features[0] = stats['DIO_rcvd'].sum()
                     # Get number of DIO transmitted
@@ -107,40 +101,41 @@ def parse_stats(args):
                     features[4] = stats['DIS_txd'].sum()
                     # Get number of application packets transmitted
                     features[5] = stats['APP_txd'].sum()
+                    # Current rank
+                    features[6] = stats['CURRENT_RANK'].iat[-1]
+                    # Current version
+                    features[7] = stats['CURRENT_VERSION'].iat[-1]
+                    # Time for rank change
+                    for i in range(1,len(stats['RANK_CHANGE_TIME'])+1):
+                        if stats['RANK_CHANGE_TIME'].iat[-i] != 0:
+                            features[8] = stats['RANK_CHANGE_TIME'].iat[-i]
+                            break
+                        else:
+                            features[8] = 0
+                    # Time for version change
+                    for i in range(1,len(stats['VERSION_CHANGE_TIME'])+1):
+                        if stats['VERSION_CHANGE_TIME'].iat[-i] != 0:
+                            features[9] = stats['VERSION_CHANGE_TIME'].iat[-i]
+                            break
+                        else:
+                            features[9] = 0
                     # Set nr of incoming vs outgoing
                     nr_incoming = stats['APP_rcvd'].sum()
                     nr_outgoing = stats['APP_txd'].sum()
                     if nr_incoming == nr_outgoing:
-                        features[6] = 1
+                        features[10] = 1
                     elif nr_outgoing != 0 and nr_incoming == 0:
-                        features[6] = 1
+                        features[10] = 1
                     else:
-                        features[6] = nr_outgoing / nr_incoming
-                    # Rank changed
-                    features[7] = stats['RANK_CHANGED'].sum()
-                    # Version changed
-                    features[8] = stats['VERSION_CHANGED'].sum()
-                    # Current rank
-                    features[9] = stats['CURRENT_RANK'].iat[-1]
-                    # Current version
-                    features[10] = stats['CURRENT_VERSION'].iat[-1]
-                    # Nr of neighbors
-                    features[11] = stats['NR_NEIGHBORS'].sum()
+                        features[10] = nr_outgoing / nr_incoming
                     # List of neighbors
                     for i in range(len(stats['NEIGHBORS'])):
                         nbrs = ast.literal_eval(list(stats['NEIGHBORS'])[i])
-
                         for j in range(len(nbrs)):
                             neighbors.append(nbrs[j])
                 neighbor_list.append(neighbors)
                 # Append the features row in feature file
                 writer.writerow(features)
-
-        # Create file from active-dict
-        with open('{}/{}/{}/{}/{}.csv'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, 'active'), 'w') as active_file:
-            writer = csv.writer(active_file)
-            writer.writerow(nodes_names)
-            writer.writerows(active_dict.values())
 
         # Create neighbors-file for each node
         with open('{}/{}/{}/{}/{}_{}.csv'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'neighbors'), 'w') as neighbor_file:
@@ -181,7 +176,7 @@ def parse_stats(args):
             last_parent_id = row[-1]['PARENT_ID']
         stats_csv = pd.read_csv('{}/{}/{}/{}/{}_{}.csv'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'stats'), index_col=False)
         #print("node: ", node, ", stats_csv columns: ", len(stats_csv.columns), ", nr of rows: ", len(stats_csv[stats_csv.columns[0]]), ", changed parent length: ", len(changed_parent))
-        stats_csv.insert(13, 'changed_parent', changed_parent)
+        stats_csv.insert(11, 'changed_parent', changed_parent)
         stats_csv.to_csv('{}/{}/{}/{}/{}_{}.csv'.format(args.feat_folder, args.scenario, args.simulation_time, 'simulation-'+args.chosen_simulation, node, 'stats'))
 
 

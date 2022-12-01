@@ -412,7 +412,7 @@ def parallel_main():
     # Through the length of test compute predictions in parallel
     for time_step in range(test_length):
         # Compute corresponding time in seconds to know when each anomaly is raised
-        time_seconds = (time_step + train_length) * args.time_window + args.time_window + args.time_window
+        time_seconds = (time_step + train_length) * args.time_window + args.time_window
         # Define list of nodes that will be checked by attack classifier
         list_nodes_raising_anomaly = {feature: list() for feature in features}
         list_nodes_raising_anomaly_full_name = {feature: list() for feature in features}

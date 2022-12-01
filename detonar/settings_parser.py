@@ -70,8 +70,8 @@ def arg_parse():
     # Parameters attack classification
     parser.add_argument('--attack_classification_features',
                         default=['# DIO rcvd', '# APP rcvd', '# DAO txd', '# DIO txd', '# DIS txd', '# APP txd',
-                                  'incoming_vs_outgoing', '# ranks', 'version_changed', 'current_rank',  'current_version',
-                                 'nr_neighbors', 'neighbors','changed_parent'],
+                                  'current_rank', 'current_version',
+                                 'rank_change_time', 'version_change_time','incoming_vs_outgoing', 'changed_parent'],
                         nargs='+', help="features used for attack classification")
 
     args = parser.parse_args()
