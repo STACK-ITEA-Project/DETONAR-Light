@@ -125,7 +125,7 @@ def multiple_check_communicating_nodes(features_series, time_step, list_nodes_tr
     #condition = (net_traffic[args.time_feat_sec] > ((time_step + 1) * args.time_window)) & (
     #        net_traffic[args.time_feat_sec] < ((time_step + 2) * args.time_window))
 
-    condition = features_series[time_step] # TODO: is this the correct time step?
+    condition = features_series[time_step]
     data = features_series[condition]
     # Get list of nodes trasmitting at least 1 packet
     list_nodes = data['TRANSMITTER_ID'].value_counts().index.to_list()
@@ -430,7 +430,7 @@ def classify_attack_from_dodag(features_series, active, anomalous_nodes, nodes_c
 
     if (not change_in_communicating_nodes):
         if (dodag_changed and (change_in_versions or change_in_ranks or change_in_nexthops)):
-            if (change_in_ranks and change_in_versions): # TODO: change to use features_series in deciding rank attacker
+            if (change_in_ranks and change_in_versions):
                 attacker_node, attack_type = find_attacker_ranks_and_versions(features_series, time_step, list_nodes_train,
                                                                               args)
                 print('\t{} ATTACK -> ATTACKER NODE {}'.format(attack_type, attacker_node))

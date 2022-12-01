@@ -50,11 +50,11 @@ def get_unique_nodes_names(data):
 def get_time_window_data(data, index, args, full_data=False): # TODO: Rätt sätt att hämta ut data från tidsfönstret
     time_window = args.time_window
     if (full_data):
-        start_time = args.time_start * 1e6 # TODO: was "time_start * 1e6"
+        start_time = args.time_start * 1e6
     else:
         start_time = index * time_window* 1e6 + args.time_start * 1e6
-        #start_time = (index * time_window) * 1e6 # TODO: was index * time_window + "time_start * 1e6"
-    end_time = ((index + 1) * time_window) * 1e6 + args.time_start * 1e6 # TODO: was index * time_window + "time_start * 1e6"
+        #start_time = (index * time_window) * 1e6
+    end_time = ((index + 1) * time_window) * 1e6 + args.time_start * 1e6
     # Get all packets that have been received at the network layer between start and end time (depending on window size)
     condition = (data[args.time_feat_micro] > start_time) & (data[args.time_feat_micro] <= end_time)
     sequence = data[condition]
