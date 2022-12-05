@@ -113,6 +113,7 @@ def process_file(sim_file, result_file, expected_attacks_lines, scenario, args):
     for line in lines:
         if 'ATTACK' in line:
             attack, last_line, last_time, attack_time, attacker_nodes = parse_attack_line(line, last_line, last_time)
+            attacker_nodes = [node.split('-')[-1] for node in attacker_nodes]
             attack_dict[attack][0].append(attack_time)
             [attack_dict[attack][1].append(attacker_node) for attacker_node in attacker_nodes]
             if scenario != 'Legit':
