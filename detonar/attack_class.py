@@ -375,8 +375,8 @@ def classify_attack_from_dodag(features_series, anomalous_nodes, nodes_changing,
     '''
     Check communicating nodes another way. if node sent statistics, it is still communicating
     '''
-    anomalous_nodes, nodes_and_features_dict, change_in_communicating_nodes = check_nodes_communicating(features_series,
-                    time_step, list_nodes_train, anomalous_nodes, nodes_and_features_dict, output_file, args)
+    #anomalous_nodes, nodes_and_features_dict, change_in_communicating_nodes = check_nodes_communicating(features_series,
+    #                time_step, list_nodes_train, anomalous_nodes, nodes_and_features_dict, output_file, args)
     toc = tm.perf_counter()
     # Check if rank changed or not
     tic = tm.perf_counter()
@@ -428,7 +428,8 @@ def classify_attack_from_dodag(features_series, anomalous_nodes, nodes_changing,
                 if (change_in_short_past):
                     nodes_and_features_dict[node][feature_class] = True
 
-    if (not change_in_communicating_nodes):
+    #if (not change_in_communicating_nodes):
+    if (True):
         if (dodag_changed and (change_in_versions or change_in_ranks or change_in_nexthops)):
             if (change_in_ranks and change_in_versions):
                 attacker_node, attack_type = find_attacker_ranks_and_versions(features_series, time_step, list_nodes_train,
