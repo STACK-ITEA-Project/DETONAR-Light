@@ -430,7 +430,7 @@ def classify_attack_from_dodag(features_series, anomalous_nodes, nodes_changing,
 
     #if (not change_in_communicating_nodes):
     if (True):
-        if (dodag_changed and (change_in_versions or change_in_ranks or change_in_nexthops)):
+        if (dodag_changed or change_in_versions or change_in_ranks or change_in_nexthops):
             if (change_in_ranks and change_in_versions):
                 attacker_node, attack_type = find_attacker_ranks_and_versions(features_series, time_step, list_nodes_train,
                                                                               args)
