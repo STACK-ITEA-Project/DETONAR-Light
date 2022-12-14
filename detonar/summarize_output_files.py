@@ -91,6 +91,7 @@ def parse_attack_line(line, last_line, last_time):
 
 
 def process_file(scenario_file, result_file, expected_attacks_lines, scenario, args):
+    sim_finished_successfully = False
     correctly_classified_sims = 0
     correctly_identified_attackers = 0
     alarm_raised = False
@@ -115,6 +116,8 @@ def process_file(scenario_file, result_file, expected_attacks_lines, scenario, a
     first_correct_attack = False
     # Get information from lines with "ATTACK"
     for line in lines:
+        if 'Finished successfully' in line:
+            sim_finished_successfully = True
         if 'ATTACK' in line:
             attack, last_line, last_time, attack_time, attacker_nodes = parse_attack_line(line, last_line, last_time)
             attack_dict[attack][0].append(attack_time)
@@ -153,7 +156,7 @@ def process_file(scenario_file, result_file, expected_attacks_lines, scenario, a
                 print_str = print_str + attack + '(' + times_str + ', attackers: ' + nodes_str + '), '
         f.close()
         result_file.write('{}: {}\n'.format(sim_number, print_str))
-    return correctly_classified_sims, correctly_identified_attackers, alarm_raised, early_alarm_raised
+    return correctly_classified_sims, correctly_identified_attackers, alarm_raised, early_alarm_raised, sim_finished_successfully
 
 
 def main(args = Args()):
@@ -188,16 +191,19 @@ def main(args = Args()):
             correctly_identified_attackers_result = 0
             alarms_raised = 0
             early_alarms_raised = 0
+            sims_finished_successfully = 0
             for file in filenames:
-                correctly_classified_sims, correctly_identified_attackers, alarm_raised, early_alarm_raised = process_file(file, result_file, expected_attacks_lines, scenario, args)
+                correctly_classified_sims, correctly_identified_attackers, alarm_raised, early_alarm_raised, sim_finished_successfully = process_file(file, result_file, expected_attacks_lines, scenario, args)
                 correctly_classified_sims_result += correctly_classified_sims
                 correctly_identified_attackers_result += correctly_identified_attackers
+                sims_finished_successfully += sim_finished_successfully
                 if alarm_raised:
                     alarms_raised += 1
                 if early_alarm_raised:
                     early_alarms_raised += 1
             result_file.write('Results: {}/{} correctly classified, {}/{} identified attacker\n'.format(correctly_classified_sims_result,total_sims, correctly_identified_attackers_result, total_sims))
             result_file.write('{}/{} alarms raised, {}/{} false positives before alarm \n'.format(alarms_raised, total_sims, early_alarms_raised, total_sims))
+            result_file.write('{}/{} sims finished successfully \n'.format(sims_finished_successfully, total_sims))
             result_file.write('\n')
 
     result_file.close()
