@@ -433,16 +433,15 @@ def parallel_main():
                                                                        single_list_neighbours, time_seconds, args)
 
             # Classify the attack
-            classify_attack_from_dodag(all_series_attack_classification, all_packets, ranks_vers, apps_packets,
-                                       anomalous_nodes,
-                                       nodes_changing,  # anomalous_nodes_full_name,
+            classify_attack_from_dodag(all_series_attack_classification, all_packets, ranks_vers,
+                                       anomalous_nodes, nodes_changing,  # anomalous_nodes_full_name,
                                        time_step + train_length, dodag_changed, list_communicating_nodes_from_train,
                                        dict_nodes_dests_from_train, output_file, args)
-
+    toc_main = tm.perf_counter()
+    output_file.write('Finished successfully after: {}'.format(toc_main - tic_main))
     # Closes txt file
     output_file.close()
     # Plot prediction times using box plot
-    toc_main = tm.perf_counter()
     print('Whole main took: {}'.format(toc_main - tic_main))
 
 

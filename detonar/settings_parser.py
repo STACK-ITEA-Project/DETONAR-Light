@@ -70,8 +70,7 @@ def arg_parse():
 
     # Parameters attack classification
     parser.add_argument('--attack_classification_features',
-                        default=['# DIO txd', '# DAO txd', '# DIS txd', '# APP txd', '# source IPs', '# dest IPs',
-                                 '# broadcasted', 'incoming_vs_outgoing'],
+                        default=['# DIO txd', '# DAO txd', '# DIS txd', '# APP txd', 'incoming_vs_outgoing'],
                         nargs='+', help="features used for attack classification")
 
     args = parser.parse_args()
