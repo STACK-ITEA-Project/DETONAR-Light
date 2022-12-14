@@ -341,8 +341,8 @@ def check_versions(net_traffic, time_step, anomalous_nodes, nodes_and_features_d
     counter = 0
     # If there is no data in previous window, fetch from next-last
     while not data_found:
-        condition = (net_traffic[args.time_feat_sec] > (time_step) * args.time_window) & (
-                net_traffic[args.time_feat_sec] < (time_step + 1) * args.time_window)
+        condition = (net_traffic[args.time_feat_sec] > (time_step) * args.time_window - counter) & (
+                net_traffic[args.time_feat_sec] < (time_step + 1) * args.time_window - counter)
         data_before = net_traffic[condition]
         names = data_before['RECEIVER_ID'].str.split('-', n=1, expand=True)
         data_before.drop(columns=['RECEIVER_ID'], inplace=True)
@@ -374,41 +374,55 @@ def check_versions(net_traffic, time_step, anomalous_nodes, nodes_and_features_d
                                 all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIS')
             transmitted_controls = all_transmitted_packets[condition]
             versions_after = transmitted_controls['RPL_VERSION'].value_counts().index.to_list()
-            # If a new destination appears then change it in the conditions dictionary
-            if (versions_after != versions_before and len(versions_after) != 0):
+            # If  there are more than one value for version present, note that version changed
+            versions = versions_before + versions_after
+            unique_versions = list(set(versions))
+            if len(unique_versions) > 1:
                 change_in_versions = True
                 nodes_and_features_dict[node]['version'] = True
     return nodes_and_features_dict, change_in_versions
 
+def get_data_for_timewindow(net_traffic, time_step, args):
+    condition = (net_traffic[args.time_feat_sec] > (time_step) * args.time_window) & (
+            net_traffic[args.time_feat_sec] < (time_step + 1) * args.time_window)
+    data_after = net_traffic[condition]
+    if not data_after.empty:
+        names = data_after['RECEIVER_ID'].str.split('-', n=1, expand=True)
+        data_after.drop(columns=['RECEIVER_ID'], inplace=True)
+        data_after['RECEIVER_ID'] = names[1]
+    return data_after
+
 
 def find_attacker_ranks(net_traffic, time_step, all_nodes, args):
-    # Get data after the anomaly
-    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
-            net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
-    data_after = net_traffic[condition]
-    names = data_after['RECEIVER_ID'].str.split('-', n=1, expand=True)
-    data_after.drop(columns=['RECEIVER_ID'], inplace=True)
-    data_after['RECEIVER_ID'] = names[1]
-    # Create dictionary with each node and corresponding time of rank change
-    nodes_and_times_dict = {node_name: math.inf for node_name in all_nodes}
-    # For each node check when it changed advised rank for the first time
-    for node in all_nodes:
-        # Get only DIOs transmitted by a single node
-        all_transmitted_packets = data_after[data_after['RECEIVER_ID'] == node]
-        condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO')
-        transmitted_dios = all_transmitted_packets[condition]
-        # Store smallest time in which rank changes
-        first_change = math.inf
-        for i in range(len(transmitted_dios.index) - 1):
-            row_before = transmitted_dios.iloc[i]
-            row_after = transmitted_dios.iloc[i + 1]
-            rank_before = row_before['RPL_RANK']
-            rank_after = row_after['RPL_RANK']
-            if ((rank_after != rank_before) and not (math.isnan(rank_before)) and not (math.isnan(rank_after))):
-                change_time = row_after[args.time_feat_sec]
-                if (change_time < first_change):
-                    first_change = change_time
-        nodes_and_times_dict[node] = first_change
+    found_rank_change_time = False
+    # Get data after the anomaly, or further back if needed
+    i = time_step
+    while(not found_rank_change_time):
+        data_after = get_data_for_timewindow(net_traffic, i + 1, args)
+        if not data_after.empty:
+            # Create dictionary with each node and corresponding time of rank change
+            nodes_and_times_dict = {node_name: math.inf for node_name in all_nodes}
+            # For each node check when it changed advised rank for the first time
+            for node in all_nodes:
+                # Get only DIOs transmitted by a single node
+                all_transmitted_packets = data_after[data_after['RECEIVER_ID'] == node]
+                condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO')
+                transmitted_dios = all_transmitted_packets[condition]
+                # Store smallest time in which rank changes
+                first_change = math.inf
+                if not transmitted_dios.empty:
+                    for it in range(len(transmitted_dios.index) - 1):
+                        row_before = transmitted_dios.iloc[it]
+                        row_after = transmitted_dios.iloc[it + 1]
+                        rank_before = row_before['RPL_RANK']
+                        rank_after = row_after['RPL_RANK']
+                        if ((rank_after != rank_before) and not (math.isnan(rank_before)) and not (math.isnan(rank_after))):
+                            change_time = row_after[args.time_feat_sec]
+                            if (change_time < first_change):
+                                first_change = change_time
+                                found_rank_change_time = True
+                nodes_and_times_dict[node] = first_change
+        i -= 1
     # Check which node changed rank first
     min_change_time = math.inf
     attacker_node = []
@@ -420,39 +434,42 @@ def find_attacker_ranks(net_traffic, time_step, all_nodes, args):
             else:
                 attacker_node[0] = node
     if (attacker_node != []):
-        print('Attacker node is {}. It first changed rank at {}'.format(attacker_node[0], nodes_and_times_dict[attacker_node]))
+        print('Attacker node is {}. It first changed rank at {}'.format(attacker_node[0], nodes_and_times_dict[attacker_node[0]]))
     return attacker_node
 
 
 def find_attacker_versions(net_traffic, time_step, all_nodes, args):
+    found_version_change_time = False
+    i = time_step
     # Get data after the anomaly
-    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
-            net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
-    data_after = net_traffic[condition]
-    names = data_after['RECEIVER_ID'].str.split('-', n=1, expand=True)
-    data_after.drop(columns=['RECEIVER_ID'], inplace=True)
-    data_after['RECEIVER_ID'] = names[1]
-    # Create dictionary with each node and corresponding time of rank change
-    nodes_and_times_dict = {node_name: math.inf for node_name in all_nodes}
-    # For each node check when it changed advised rank for the first time
-    for node in all_nodes:
-        # Get only DIOs transmitted by a single node
-        all_transmitted_packets = data_after[data_after['RECEIVER_ID'] == node]
-        condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO')
-        transmitted_dios = all_transmitted_packets[condition]
-        # Store smallest time in which version changes
-        first_change = math.inf
-        for i in range(len(transmitted_dios.index) - 1):
-            row_before = transmitted_dios.iloc[i]
-            row_after = transmitted_dios.iloc[i + 1]
-            version_before = row_before['RPL_VERSION']
-            version_after = row_after['RPL_VERSION']
-            if ((version_after != version_before) and not (math.isnan(version_before)) and not (
-            math.isnan(version_after))):
-                change_time = row_after[args.time_feat_sec]
-                if (change_time < first_change):
-                    first_change = change_time
-        nodes_and_times_dict[node] = first_change
+    while(not found_version_change_time):
+        data_after = get_data_for_timewindow(net_traffic, i + 1, args)
+
+        if not data_after.empty:
+            # Create dictionary with each node and corresponding time of rank change
+            nodes_and_times_dict = {node_name: math.inf for node_name in all_nodes}
+            # For each node check when it changed advised rank for the first time
+            for node in all_nodes:
+                # Get only DIOs transmitted by a single node
+                all_transmitted_packets = data_after[data_after['RECEIVER_ID'] == node]
+                condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO')
+                transmitted_dios = all_transmitted_packets[condition]
+                # Store smallest time in which version changes
+                first_change = math.inf
+                if not transmitted_dios.empty:
+                    for it in range(len(transmitted_dios.index) - 1):
+                        row_before = transmitted_dios.iloc[it]
+                        row_after = transmitted_dios.iloc[it + 1]
+                        version_before = row_before['RPL_VERSION']
+                        version_after = row_after['RPL_VERSION']
+                        if ((version_after != version_before) and not (math.isnan(version_before)) and not (
+                        math.isnan(version_after))):
+                            change_time = row_after[args.time_feat_sec]
+                            if (change_time < first_change):
+                                first_change = change_time
+                                found_version_change_time = True
+                nodes_and_times_dict[node] = first_change
+        i -=1
     # Check which node changed rank first
     min_change_time = math.inf
     attacker_node = []
@@ -461,50 +478,54 @@ def find_attacker_versions(net_traffic, time_step, all_nodes, args):
             min_change_time = nodes_and_times_dict[node]
             attacker_node = node
     if (attacker_node != []):
-        print('Attacker node is {}. It changed rank at {}'.format(attacker_node, nodes_and_times_dict[attacker_node]))
+        print('Attacker node is {}. It changed version at {}'.format(attacker_node, nodes_and_times_dict[attacker_node]))
     attacker = []
     attacker.append(attacker_node)
     return attacker
 
 
 def find_attacker_ranks_and_versions(net_traffic, time_step, all_nodes, args):
+    found_version_change_time = False
+    found_rank_change_time = False
+    i = time_step
     # Get data after the anomaly
-    condition = (net_traffic[args.time_feat_sec] > (time_step + 1) * args.time_window) & (
-            net_traffic[args.time_feat_sec] < (time_step + 2) * args.time_window)
-    data_after = net_traffic[condition]
-    names = data_after['RECEIVER_ID'].str.split('-', n=1, expand=True)
-    data_after.drop(columns=['RECEIVER_ID'], inplace=True)
-    data_after['RECEIVER_ID'] = names[1]
-    # Create dictionary with each node and corresponding time of rank change and versions change
-    nodes_and_ranks_times_dict = {node_name: math.inf for node_name in all_nodes}
-    nodes_and_versions_times_dict = {node_name: math.inf for node_name in all_nodes}
-    # For each node check when it changed advised rank for the first time
-    for node in all_nodes:
-        # Get only DIOs transmitted by a single node
-        all_transmitted_packets = data_after[data_after['RECEIVER_ID'] == node]
-        condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO')
-        transmitted_dios = all_transmitted_packets[condition]
-        # Store smallest time in which version changes
-        first_change_rank = math.inf
-        first_change_version = math.inf
-        for i in range(len(transmitted_dios.index) - 1):
-            row_before = transmitted_dios.iloc[i]
-            row_after = transmitted_dios.iloc[i + 1]
-            version_before = row_before['RPL_VERSION']
-            version_after = row_after['RPL_VERSION']
-            rank_before = row_before['RPL_RANK']
-            rank_after = row_after['RPL_RANK']
-            if ((rank_after != rank_before) and not (math.isnan(rank_before)) and not (math.isnan(rank_after))):
-                change_time_rank = row_after[args.time_feat_sec]
-                if (change_time_rank < first_change_rank):
-                    first_change_rank = change_time_rank
-            if ((version_after != version_before) and not (math.isnan(version_before)) and not (
-            math.isnan(version_after))):
-                change_time_version = row_after[args.time_feat_sec]
-                if (change_time_version < first_change_version):
-                    first_change_version = change_time_version
-        nodes_and_ranks_times_dict[node] = first_change_rank
-        nodes_and_versions_times_dict[node] = first_change_version
+    while(not (found_version_change_time or found_rank_change_time)):
+        data_after = get_data_for_timewindow(net_traffic, i + 1, args)
+        if not data_after.empty:
+            # Create dictionary with each node and corresponding time of rank change and versions change
+            nodes_and_ranks_times_dict = {node_name: math.inf for node_name in all_nodes}
+            nodes_and_versions_times_dict = {node_name: math.inf for node_name in all_nodes}
+            # For each node check when it changed advised rank for the first time
+            for node in all_nodes:
+                # Get only DIOs transmitted by a single node
+                all_transmitted_packets = data_after[data_after['RECEIVER_ID'] == node]
+                condition = (all_transmitted_packets['CONTROL_PACKET_TYPE/APP_NAME'] == 'DIO')
+                transmitted_dios = all_transmitted_packets[condition]
+                # Store smallest time in which version changes
+                first_change_rank = math.inf
+                first_change_version = math.inf
+                if not transmitted_dios.empty:
+                    for it in range(len(transmitted_dios.index) - 1):
+                        row_before = transmitted_dios.iloc[it]
+                        row_after = transmitted_dios.iloc[it + 1]
+                        version_before = row_before['RPL_VERSION']
+                        version_after = row_after['RPL_VERSION']
+                        rank_before = row_before['RPL_RANK']
+                        rank_after = row_after['RPL_RANK']
+                        if ((rank_after != rank_before) and not (math.isnan(rank_before)) and not (math.isnan(rank_after))):
+                            change_time_rank = row_after[args.time_feat_sec]
+                            if (change_time_rank < first_change_rank):
+                                first_change_rank = change_time_rank
+                                found_rank_change_time = True
+                        if ((version_after != version_before) and not (math.isnan(version_before)) and not (
+                        math.isnan(version_after))):
+                            change_time_version = row_after[args.time_feat_sec]
+                            if (change_time_version < first_change_version):
+                                first_change_version = change_time_version
+                                found_version_change_time = True
+                nodes_and_ranks_times_dict[node] = first_change_rank
+                nodes_and_versions_times_dict[node] = first_change_version
+        i -= 1
     # Check which node changed rank first
     min_change_time_ranks = math.inf
     attacker_node_ranks = []
@@ -559,7 +580,7 @@ def find_attacker_worst_parent(nodes_and_features_dict, list_nodes_train):
             attacker_nodes.append(node)
     return attacker_nodes
 
-def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_packets, anomalous_nodes, nodes_changing,
+def classify_attack_from_dodag(features_series, all_packets, ranks_vers, anomalous_nodes, nodes_changing,
                                time_step, dodag_changed, list_nodes_train, dict_nodes_dests_from_train, output_file,
                                args):
     # Create list of features for attack classification
@@ -634,7 +655,7 @@ def classify_attack_from_dodag(features_series, all_packets, ranks_vers, apps_pa
                     nodes_and_features_dict[node][feature_class] = True
 
     if (not change_in_communicating_nodes):
-        if (dodag_changed and (change_in_versions or change_in_ranks or change_in_nexthops)):
+        if (dodag_changed or (change_in_versions or change_in_ranks or change_in_nexthops)):
             if (change_in_ranks and change_in_versions):
                 attacker_node, attack_type = find_attacker_ranks_and_versions(ranks_vers, time_step, list_nodes_train,
                                                                               args)
