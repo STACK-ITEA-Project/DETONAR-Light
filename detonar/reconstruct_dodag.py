@@ -1,58 +1,55 @@
-# Python modules
-import pandas as pd
-import numpy as np
 import os
-import glob
-import networkx as nx
-import matplotlib.pyplot as plt
 import time as tm
-# Python files
+
+import networkx as nx
+
 import settings_parser
 
 
 def extract_data_up_to(data, time, args):
     # From the pandas dataframe extract only those packets arrived up to a certain second
-    condition = (data[args.time_feat_sec] <= time)
+    condition = data[args.time_feat_sec] <= time
     data = data[condition]
     return data
 
 
 def refine_edges_list(edges):
-    edges_to_remove = list()
+    edges_to_remove = []
     # For each edges in the list of edges check if two edges have the same source
     for i in range(len(edges)):
         for j in range(i + 1, len(edges)):
             source_node_first_link = edges[i][0]
             source_node_second_link = edges[j][0]
             # If they have the same source then the oldest link must be removed since it means that the node had changed parent
-            if (source_node_first_link == source_node_second_link):
+            if source_node_first_link == source_node_second_link:
                 edges_to_remove.append(edges[i])
     # Get a set from the list of edges to remove and remove all of them from the original edges list
     edges_to_remove = set(edges_to_remove)
-    for ed in edges_to_remove:
-        edges.remove(ed)
+    for edge in edges_to_remove:
+        edges.remove(edge)
 
     return edges
 
 
-
 def get_dodag(data):
     # Get DAOs where source_ID == transmitter ID (the first step in the route towards the root)
-    # Receiver of these packets^ is the parent
-    source_ids = data['SOURCE_ID'].unique()
+    # The receiver of these packets^ is the parent
+    source_ids = data["SOURCE_ID"].unique()
     source_ids_short = [id.split("-")[-1] for id in source_ids]
 
     # Get DAOs where SOURCE_ID == TRANSMITTER_ID
-    condition = data['SOURCE_ID'] == data['TRANSMITTER_ID']
+    condition = data["SOURCE_ID"] == data["TRANSMITTER_ID"]
     first_hop = data[condition]
 
     edges = []
     # For each node sending a DAO, find the latest DAO and add it as an edge
     for node in source_ids:
-        all_daos = first_hop[first_hop['SOURCE_ID'] == node]
-        latest_condition =  all_daos['PHY_LAYER_ARRIVAL_TIME(S)'] == max(all_daos['PHY_LAYER_ARRIVAL_TIME(S)'])
+        all_daos = first_hop[first_hop["SOURCE_ID"] == node]
+        latest_condition = all_daos["PHY_LAYER_ARRIVAL_TIME(S)"] == max(
+            all_daos["PHY_LAYER_ARRIVAL_TIME(S)"]
+        )
         latest_dao = all_daos[latest_condition]
-        parent = latest_dao['RECEIVER_ID']
+        parent = latest_dao["RECEIVER_ID"]
         node_short = node.split("-")[-1]
         parent_array = parent.values
         parent_short = parent_array[0].split("-")[-1]
@@ -62,31 +59,6 @@ def get_dodag(data):
     # Build the DODAG graph from nodes and edges lists
     dodag.add_nodes_from(source_ids_short)
     dodag.add_edges_from(edges)
-
-    '''
-    # Get source ids and dest ids only with numbers
-    source_ids = data['SOURCE_ID'].values.tolist()
-    source_ids = [id.split("-")[-1] for id in source_ids]
-    dest_ids = data['DESTINATION_ID'].values.tolist()
-    dest_ids = [id.split("-")[-1] for id in dest_ids]
-    # Each DAO represents a potential edge
-    edges = [(source_ids[i], dest_ids[i]) for i in range(len(source_ids))]
-    # Remove duplicate potential edges and maintain the order
-    seen = set()
-    seen_add = seen.add
-    edges = [x for x in edges if not (x in seen or seen_add(x))]
-    # Get list of nodes names (order doesn't matter)
-    source_ids = list(dict.fromkeys(source_ids))
-    dest_ids = list(dict.fromkeys(dest_ids))
-    list_of_nodes = source_ids + dest_ids
-    list_of_nodes = list(dict.fromkeys(list_of_nodes))
-    # Use nx to obtain the graph corresponding to the dodag
-    dodag = nx.Graph()
-    # Refine the list of edges in order to keep only most recent father-son relationships
-    edges = refine_edges_list(edges)
-    # Build the DODAG graph from nodes and edges lists
-    dodag.add_nodes_from(list_of_nodes)
-    dodag.add_edges_from(edges)'''
     return dodag
 
 
@@ -118,7 +90,7 @@ def extract_dodag_before_after(data, list_nodes, neighbors, time, args):
     toc = tm.perf_counter()
     # print('Everything DODAG took {:.5f}'.format(toc - tic))
     # plt.show()
-    if (len(dodag_difference) == 0):
+    if len(dodag_difference) == 0:
         return False, []
     nodes_changing = dodag_difference.nodes()
 
@@ -131,9 +103,14 @@ def main():
     window_time = 10
     time_step = 25
     time_anomaly = time_step * 10 + 10
-    extract_dodag_before_after(os.path.join(os.getcwd(), '..', args.data_dir, 'Sinkhole', 'Packet_Trace_600s/001.csv'),
-                               time_anomaly, window_time)
+    extract_dodag_before_after(
+        os.path.join(
+            os.getcwd(), "..", args.data_dir, "Hello_Flood", "Packet_Trace_600s/001.csv"
+        ),
+        time_anomaly,
+        window_time,
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
