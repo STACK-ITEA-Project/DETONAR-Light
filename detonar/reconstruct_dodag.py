@@ -1,52 +1,49 @@
 # Python modules
-import pandas as pd
-import numpy as np
 import os
-import glob
-import networkx as nx
-import matplotlib.pyplot as plt
 import time as tm
+
+import networkx as nx
+
 # Python files
 import settings_parser
 
 
 def extract_data_up_to(data, time, args):
     # From the pandas dataframe extract only those packets arrived up to a certain second
-    condition = (data[args.time_feat_sec] <= time)
+    condition = data[args.time_feat_sec] <= time
     data = data[condition]
     return data
 
 
 def refine_edges_list(edges):
-    edges_to_remove = list()
+    edges_to_remove = []
     # For each edges in the list of edges check if two edges have the same source
     for i in range(len(edges)):
         for j in range(i + 1, len(edges)):
             source_node_first_link = edges[i][0]
             source_node_second_link = edges[j][0]
-            # If they have the same source then the oldest link must be removed since it means that the node had changed parent
-            if (source_node_first_link == source_node_second_link):
+            # Remove any link but the oldest
+            if source_node_first_link == source_node_second_link:
                 edges_to_remove.append(edges[i])
     # Get a set from the list of edges to remove and remove all of them from the original edges list
     edges_to_remove = set(edges_to_remove)
-    for ed in edges_to_remove:
-        edges.remove(ed)
+    for edge in edges_to_remove:
+        edges.remove(edge)
 
     return edges
-
 
 
 def get_dodag(data):
     # Get DAOs where source_ID == transmitter ID (the first step in the route towards the root)
     # Receiver of these packets^ is the parent
-    source_ids = data['SOURCE_ID'].unique()
+    source_ids = data["SOURCE_ID"].unique()
     edges = []
     # For each node sending a DAO, find the latest DAO and add it as an edge
     for node in source_ids:
-        all_daos = data[data['SOURCE_ID'] == node]
-        latest_condition =  all_daos['TIME'] == max(all_daos['TIME'])
+        all_daos = data[data["SOURCE_ID"] == node]
+        latest_condition = all_daos["TIME"] == max(all_daos["TIME"])
         latest_dao = all_daos[latest_condition]
-        parent = latest_dao['PARENT_ID']
+        parent = latest_dao["PARENT_ID"]
         parent_array = parent.values
         edges.append((node, parent_array[0]))
     # Use nx to obtain the graph corresponding to the dodag
@@ -85,7 +82,7 @@ def extract_dodag_before_after(data, list_nodes, neighbors, time, args):
     toc = tm.perf_counter()
     # print('Everything DODAG took {:.5f}'.format(toc - tic))
     # plt.show()
-    if (len(dodag_difference) == 0):
+    if len(dodag_difference) == 0:
         return False, []
     nodes_changing = dodag_difference.nodes()
 
@@ -98,9 +95,14 @@ def main():
     window_time = 10
     time_step = 25
     time_anomaly = time_step * 10 + 10
-    extract_dodag_before_after(os.path.join(os.getcwd(), '..', args.data_dir, 'Sinkhole', 'Packet_Trace_600s/001.csv'),
-                               time_anomaly, window_time)
+    extract_dodag_before_after(
+        os.path.join(
+            os.getcwd(), "..", args.data_dir, "Sinkhole", "Packet_Trace_600s/001.csv"
+        ),
+        time_anomaly,
+        window_time,
+    )
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
