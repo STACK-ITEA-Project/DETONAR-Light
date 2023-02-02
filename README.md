@@ -1,6 +1,8 @@
 # DETONAR on Cooja logs
 
-This is an extension of the original implementation of DETONAR, to adjust it to work on Cooja logs. You can run DETONAR the same way as originally, or use the pipeline which runs all steps for you:
+This is an extension of the original implementation of DETONAR, to adjust it to work on Cooja logs. You can run DETONAR the same way as originally, or use the pipeline which runs all steps for you. 
+
+Datasets to use can be found [HERE](https://github.com/vikiminki/DETONAR-cooja-datasets). For this brach, pick a dataset labeled "sniffer". 
 
 ## Running the whole DETONAR pipeline
 
