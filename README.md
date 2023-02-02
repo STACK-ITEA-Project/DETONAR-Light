@@ -2,6 +2,7 @@
 
 This is an extension of the original implementation of DETONAR, to make it possible to run DETONAR on Cooja logs from a border router rather than the full network traffic.
 
+Datasets to use can be found [HERE](https://github.com/vikiminki/DETONAR-cooja-datasets). For this branch, pick a dataset labeled "BR" (border router).
 
 ## Running the whole DETONAR pipeline
 
